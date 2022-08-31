@@ -52,7 +52,7 @@ router.get("/users/:userid", user_controller.get_user)
 // PUT update single user
 router.put("/users/:userid", user_controller.put_user)
 // DELETE delete single user
-router.delete("users/:userid", user_controller.delete_user)
+router.delete("/users/:userid", user_controller.delete_user)
 
 
 module.exports = router;
