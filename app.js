@@ -4,14 +4,16 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var mongoose = require("mongoose");
+var cors = require("cors")
 require("dotenv").config();
-
 
 var blogRouter = require("./routes/blog");
 var editRouter = require("./routes/edit");
 
 var app = express();
 
+
+app.use(cors());
 
 // database setup
 const mongoDB = process.env.DB_URL;
