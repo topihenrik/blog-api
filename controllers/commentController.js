@@ -22,7 +22,7 @@ exports.comment_post = [
 
             comment.save((err) => {
                 if (err) return next(err);
-                res.status(201).json({message: "The message was created successfully"});
+                res.status(201).json({message: "The message was created successfully", status: 201});
             }) 
         }
     }
