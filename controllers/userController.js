@@ -1,12 +1,29 @@
 const User = require("../models/user")
-const { body,validationResult } = require('express-validator')
+const { body, validationResult } = require('express-validator')
 const async = require("async")
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 require("dotenv").config();
 
 
+
+// setup multer
+const multer = require("multer");
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, "public/images/users/");
+    },
+    filename: (req, file, cb) => {
+        const extArray = file.mimetype.split("/");
+        const fileExtension = extArray[1];
+        cb(null, (Date.now() + "." + fileExtension));
+    }
+});
+const upload = multer({storage: storage});
+
+
 exports.post_user = [
+    upload.single("avatar"),
     body("first_name", "first name has to be specified").trim().isLength({min:1}).isAlphanumeric().escape(),
     body("last_name", "last name has to be specified").trim().isLength({min: 1}).isAlphanumeric().escape(),
     body("email", "email has to be specified").trim().isEmail().isLength({min:1}).escape(),
@@ -18,7 +35,6 @@ exports.post_user = [
             return value;
         }
     }),
-
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -34,13 +50,24 @@ exports.post_user = [
 
                 bcrypt.hash(req.body.password, 10, (err, hashedPassword) => {
                     if (err) return next(err);
-    
+
+                    let contentType = undefined;
+                    let path = undefined;
+                    if (req.file) {
+                        contentType = req.file.mimetype;
+                        path = "images/users/"+req.file.filename;
+                    }
+
                     const user = new User(
                         {
                             first_name: req.body.first_name,
                             last_name: req.body.last_name,
                             email: req.body.email,
-                            password: hashedPassword
+                            password: hashedPassword,
+                            avatar: {
+                                contentType: contentType,
+                                path: path
+                            }
                         }
                     )
         

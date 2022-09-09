@@ -30,7 +30,7 @@ exports.comment_post = [
 
 // Find comments for specific post
 exports.comments_get = (req, res, next) => {
-    Comment.find({post: req.params.postid}).select({post: 0}).populate("author", "first_name last_name").exec((err, comment_list) => {
+    Comment.find({post: req.params.postid}).select({post: 0}).populate("author", "first_name last_name avatar").exec((err, comment_list) => {
         if (err) return next(err);
         if (comment_list == null || comment_list == "") {
             const error = new Error("Comments not found");
@@ -42,7 +42,7 @@ exports.comments_get = (req, res, next) => {
 }
 
 exports.comment_get = (req, res, next) => {
-    Comment.findById(req.params.commentid).select({post: 0}).populate("author", "first_name last_name").exec((err, thecomment) => {
+    Comment.findById(req.params.commentid).select({post: 0}).populate("author", "first_name last_name avatar").exec((err, thecomment) => {
         if (err) return next(err);
         if (thecomment == null || thecomment == "") {
             const error = new Error("Comment not found");

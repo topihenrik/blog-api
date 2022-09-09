@@ -5,7 +5,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var mongoose = require("mongoose");
 var cors = require("cors")
-//const bodyParser = require("body-parser");
+/* const bodyParser = require("body-parser"); */
 require("dotenv").config();
 var blogRouter = require("./routes/blog");
 var authRouter = require("./routes/auth");
@@ -34,6 +34,10 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+/* app.use((req, res, next) => {
+  console.log(req.body);
+  next();
+}) */
 
 // routes
 app.use("/", blogRouter);

@@ -9,7 +9,11 @@ const PostSchema = new Schema(
         content: {type: String, required: true},
         author: {type: Schema.Types.ObjectId, ref: "User"},
         timestamp: {type: Date, required: true, default: Date.now},
-        published: {type: Boolean, required: true, default: false}
+        photo: {
+            contentType: {type: String, default: "image/jpeg"},
+            path: {type: String, default: () => {return "images/posts/default-"+Math.ceil(Math.random() * 3).toString()+".jpg";}}
+        },
+        published: {type: Boolean, default: false}
     }
 )
 

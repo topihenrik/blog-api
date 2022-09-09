@@ -1,8 +1,24 @@
 const Post = require("../models/post");
 const { body,validationResult } = require('express-validator');
 
+// setup multer
+const multer = require("multer");
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, "public/images/posts/");
+    },
+    filename: (req, file, cb) => {
+        const extArray = file.mimetype.split("/");
+        const fileExtension = extArray[1];
+        cb(null, (Date.now() + "." + fileExtension));
+    }
+});
+const upload = multer({storage: storage});
+
+
 
 exports.post_post = [
+    upload.single("photo"),
     body("title", "Title must be specified").trim().isLength({min:1}).escape(),
     body("content", "Content must be specified").trim().isLength({min:1}).escape(),
 
@@ -12,12 +28,26 @@ exports.post_post = [
         if (!errors.isEmpty()) {
             res.status(400).json({errors: errors.array()})
         } else {
+            
+
+            let contentType = undefined;
+            let path = undefined;
+            if (req.file) {
+                contentType = req.file.mimetype;
+                path = "images/users/"+req.file.filename;
+            }
+
+
             const post = new Post(
                 {
                     title: req.body.title,
                     content: req.body.content,
                     author: req.body.author, // might need changes when the front is implemented
                     timestamp: Date.now(),
+                    photo: {
+                        contentType: contentType,
+                        path: path
+                    },
                     published: req.body.published
                 }
             )
@@ -31,7 +61,7 @@ exports.post_post = [
 ]
 
 exports.posts_get = (req, res, next) => {
-    Post.find().populate("author", "first_name last_name").exec((err, post_list) => {
+    Post.find().populate("author", "first_name last_name avatar").exec((err, post_list) => {
         if (err) return next(err);
         if (post_list == null) {
             const error = new Error("No post found");
@@ -43,7 +73,7 @@ exports.posts_get = (req, res, next) => {
 }
 
 exports.post_get = (req, res, next) => {
-    Post.findById(req.params.postid).populate("author", "first_name last_name").exec((err, thepost) => {
+    Post.findById(req.params.postid).populate("author", "first_name last_name avatar").exec((err, thepost) => {
         if (err) return next(err);
         if (thepost === null) {
             const error = new Error("No post found");
