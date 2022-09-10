@@ -3,6 +3,7 @@ const { body,validationResult } = require('express-validator');
 
 // setup multer
 const multer = require("multer");
+const jwt = require("jsonwebtoken");
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, "public/images/posts/");
@@ -42,7 +43,7 @@ exports.post_post = [
                 {
                     title: req.body.title,
                     content: req.body.content,
-                    author: req.body.author, // might need changes when the front is implemented
+                    author: req.body.author, // might need changes when the front is implemented. maybe use jwt
                     timestamp: Date.now(),
                     photo: {
                         contentType: contentType,
@@ -60,6 +61,7 @@ exports.post_post = [
     }
 ]
 
+// GET all posts
 exports.posts_get = (req, res, next) => {
     Post.find().populate("author", "first_name last_name avatar").exec((err, post_list) => {
         if (err) return next(err);
@@ -72,6 +74,7 @@ exports.posts_get = (req, res, next) => {
     })
 }
 
+// GET single post based on postID
 exports.post_get = (req, res, next) => {
     Post.findById(req.params.postid).populate("author", "first_name last_name avatar").exec((err, thepost) => {
         if (err) return next(err);
@@ -81,6 +84,25 @@ exports.post_get = (req, res, next) => {
             return next(error);
         }
         res.status(200).json({post_list: thepost})
+    })
+}
+
+
+// GET all posts from specific authorID
+exports.get_posts_author = (req, res, next) => {
+    /* console.log(req.headers.authorization.split(" ")[1]); */
+    /* process.env.AUTH_SECRET */
+    const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+    console.log(decoded._id);
+
+    Post.find({author: decoded._id}).populate("author", "first_name last_name avatar").exec((err, post_list) => {
+        if (err) return next(err);
+        if (post_list === null) {
+            const error = new Error("No post found");
+            error.status = 404;
+            return next(error);
+        }
+        res.status(200).json({post_list: post_list})
     })
 }
 

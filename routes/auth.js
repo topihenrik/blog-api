@@ -10,6 +10,9 @@ const user_controller = require("../controllers/userController");
 
 // BRING POST BACK
 
+
+// GET single post from specific author
+router.get("/posts/author", post_controller.get_posts_author);
 // PUT update single post
 router.put("/posts/:postid", post_controller.post_put);
 // DELETE delete single post

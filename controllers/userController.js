@@ -97,7 +97,7 @@ exports.post_login = (req, res1, next) => {
             if (res) {
                 // Passwords match -> LOGIN
                 
-                const token = jwt.sign({email: req.body.email}, process.env.AUTH_SECRET, {expiresIn: "20h"})
+                const token = jwt.sign({_id: user._id, email: user.email}, process.env.AUTH_SECRET, {expiresIn: "20h"})
                 res1.status(200).json(
                     {message: "Authorization succesful", 
                     token: token,
