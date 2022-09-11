@@ -4,22 +4,30 @@ const async = require("async")
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 require("dotenv").config();
+const {nanoid} = require("nanoid");
 
+
+
+// setup sharp
+const fileFilter = (req, file, cb) => {
+    console.log(file.buffer);
+}
 
 
 // setup multer
 const multer = require("multer");
-const storage = multer.diskStorage({
+const sharp = require("sharp")
+/* const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, "public/images/users/");
     },
     filename: (req, file, cb) => {
-        const extArray = file.mimetype.split("/");
-        const fileExtension = extArray[1];
-        cb(null, (Date.now() + "." + fileExtension));
+        cb(null, Date.now().toString());
     }
-});
+}); */
+const storage = multer.memoryStorage();
 const upload = multer({storage: storage});
+
 
 
 exports.post_user = [
@@ -36,51 +44,62 @@ exports.post_user = [
         }
     }),
     (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            res.status(400).json({errors: errors.array()});
-        } else {
-            User.findOne({email: req.body.email}, (err, user) => {
-                if (err) return next(err);
-                if (user !== null) {
-                    const error = new Error("that email is already taken");
-                    error.status = 409;
-                    return next(error);
-                }
+        let fileName = undefined;
 
-                bcrypt.hash(req.body.password, 10, (err, hashedPassword) => {
+        const optimizeImage = async () => {
+            if (req.file) {
+                fileName = "images/users/" + nanoid() + ".webp";
+                sharp(req.file.buffer).resize(256).webp({lossless: true}).toFile("public/"+fileName, (err) => {
                     if (err) return next(err);
+                })
+            } 
+        };
 
-                    let contentType = undefined;
-                    let path = undefined;
-                    if (req.file) {
-                        contentType = req.file.mimetype;
-                        path = "images/users/"+req.file.filename;
+        const otherStuff = async () => {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                res.status(400).json({errors: errors.array()});
+            } else {
+                User.findOne({email: req.body.email}, (err, user) => {
+                    if (err) return next(err);
+                    if (user !== null) {
+                        const error = new Error("that email is already taken");
+                        error.status = 409;
+                        return next(error);
                     }
-
-                    const user = new User(
-                        {
-                            first_name: req.body.first_name,
-                            last_name: req.body.last_name,
-                            email: req.body.email,
-                            password: hashedPassword,
-                            avatar: {
-                                contentType: contentType,
-                                path: path
-                            }
-                        }
-                    )
-        
-                    user.save((err) => {
+    
+                    bcrypt.hash(req.body.password, 10, (err, hashedPassword) => {
                         if (err) return next(err);
-                        res.status(201).json({message: "The user was created successfully", status: 201});
+    
+                        let contentType = undefined;
+                        let path = undefined;
+                        if (req.file) {
+                            contentType = "image/webp";
+                            path = fileName;
+                        }
+    
+                        const user = new User(
+                            {
+                                first_name: req.body.first_name,
+                                last_name: req.body.last_name,
+                                email: req.body.email,
+                                password: hashedPassword,
+                                avatar: {
+                                    contentType: contentType,
+                                    path: path
+                                }
+                            }
+                        )
+            
+                        user.save((err) => {
+                            if (err) return next(err);
+                            res.status(201).json({message: "The user was created successfully", status: 201});
+                        })
                     })
                 })
-            })
-
-            console.log("CONTINUES")
-              
+            }
         }
+        optimizeImage().then(otherStuff);
     }
 ]
 
