@@ -17,14 +17,6 @@ const fileFilter = (req, file, cb) => {
 // setup multer
 const multer = require("multer");
 const sharp = require("sharp")
-/* const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, "public/images/users/");
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now().toString());
-    }
-}); */
 const storage = multer.memoryStorage();
 const upload = multer({storage: storage});
 

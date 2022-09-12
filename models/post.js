@@ -7,11 +7,12 @@ const PostSchema = new Schema(
     {
         title: {type: String, required: true},
         content: {type: String, required: true},
+        description: {type: String, required: true},
         author: {type: Schema.Types.ObjectId, ref: "User"},
         timestamp: {type: Date, required: true, default: Date.now},
         photo: {
-            contentType: {type: String, default: "image/jpeg"},
-            path: {type: String, default: () => {return "images/posts/default-"+Math.ceil(Math.random() * 3).toString()+".jpg";}}
+            contentType: {type: String, default: "image/webp"},
+            path: {type: String, default: () => {return "images/posts/default-"+Math.ceil(Math.random() * 3).toString()+".webp";}}
         },
         published: {type: Boolean, default: false}
     }

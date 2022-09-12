@@ -7,10 +7,8 @@ const user_controller = require("../controllers/userController");
 
 
 // POST ROUTES
-
-// BRING POST BACK
-
-
+// POST create single post
+router.post("/posts", post_controller.post_post);
 // GET single post from specific author
 router.get("/posts/author", post_controller.get_posts_author);
 // PUT update single post

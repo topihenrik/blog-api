@@ -14,7 +14,7 @@ exports.comment_post = [
             const comment = new Comment(
                 {
                     content: req.body.content,
-                    author: req.body.author, // might have to change
+                    author: req.body.author, // use JWT payload instead
                     post: req.params.postid,
                     timestamp: Date.now()
                 }
@@ -57,6 +57,7 @@ exports.comment_put = [
     body("content", "Content must be specified").trim().isLength({min:1}).escape(),
 
     (req, res, next) => {
+        const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
         const errors = validationResult(req);
 
         if (!errors.isEmpty()) {
@@ -65,7 +66,7 @@ exports.comment_put = [
             const comment = new Comment(
                 {
                     content: req.body.content,
-                    author: req.body.author, // might have to change
+                    author: decoded._id,
                     post: req.params.postid,
                     timestamp: Date.now(),
                     _id: req.params.commentid

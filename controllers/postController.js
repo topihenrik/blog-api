@@ -1,62 +1,75 @@
 const Post = require("../models/post");
 const { body,validationResult } = require('express-validator');
+const jwt = require("jsonwebtoken");
+const {nanoid} = require("nanoid");
 
 // setup multer
 const multer = require("multer");
-const jwt = require("jsonwebtoken");
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, "public/images/posts/");
-    },
-    filename: (req, file, cb) => {
-        const extArray = file.mimetype.split("/");
-        const fileExtension = extArray[1];
-        cb(null, (Date.now() + "." + fileExtension));
-    }
-});
+const sharp = require("sharp");
+const storage = multer.memoryStorage();
 const upload = multer({storage: storage});
+
+// setup dompurify
+const createDOMPurify = require("dompurify");
+const { JSDOM } = require("jsdom");
+
+const window = new JSDOM("").window;
+const DOMPurify = createDOMPurify(window);
 
 
 
 exports.post_post = [
     upload.single("photo"),
     body("title", "Title must be specified").trim().isLength({min:1}).escape(),
-    body("content", "Content must be specified").trim().isLength({min:1}).escape(),
-
+    body("content", "Content must be specified").isLength({min:5}),
+    body("description", "Description must be specified").trim().isLength({min:5}).escape(),
     (req, res, next) => {
         const errors = validationResult(req);
-
         if (!errors.isEmpty()) {
             res.status(400).json({errors: errors.array()})
         } else {
-            
-
-            let contentType = undefined;
-            let path = undefined;
-            if (req.file) {
-                contentType = req.file.mimetype;
-                path = "images/users/"+req.file.filename;
+            let fileName = undefined;
+            const optimizeImage = async () => {
+                if(req.file) {
+                    fileName = "images/posts/" + nanoid() + ".webp";
+                    sharp(req.file.buffer).resize({width:1920}).webp().toFile("public/"+fileName, (err) => {
+                        if (err) return next(err);
+                    })
+                }
             }
 
-
-            const post = new Post(
-                {
-                    title: req.body.title,
-                    content: req.body.content,
-                    author: req.body.author, // might need changes when the front is implemented. maybe use jwt
-                    timestamp: Date.now(),
-                    photo: {
-                        contentType: contentType,
-                        path: path
-                    },
-                    published: req.body.published
+            const otherStuff = async () => {
+                const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+                const cleanContent = DOMPurify.sanitize(req.body.content);
+                let contentType = undefined;
+                let path = undefined;
+                if (req.file) {
+                    contentType = "image/webp";
+                    path = fileName;
                 }
-            )
+    
+                const post = new Post(
+                    {
+                        title: req.body.title,
+                        content: cleanContent,
+                        description: req.body.description,
+                        author: decoded._id,
+                        timestamp: Date.now(),
+                        photo: {
+                            contentType: contentType,
+                            path: path
+                        },
+                        published: req.body.published
+                    }
+                )
+    
+                post.save((err) => {
+                    if (err) return next(err);
+                    res.status(201).json({status: 201 ,message: "The post was created successfully"})
+                })
+            }
 
-            post.save((err) => {
-                if (err) return next(err);
-                res.status(201).json({message: "The post was created successfully"})
-            })
+            optimizeImage().then(otherStuff);
         }
     }
 ]

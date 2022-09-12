@@ -13,10 +13,6 @@ router.get('/', function(req, res, next) {
 
 
 // POST ROUTES
-
-// MIGRATE THIS TO auth.js WHEN DONE
-// POST create single post
-router.post("/posts", post_controller.post_post);
 // GET all posts
 router.get("/posts", post_controller.posts_get);
 // GET single post
