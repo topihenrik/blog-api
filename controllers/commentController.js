@@ -1,5 +1,7 @@
 const Comment = require("../models/comment")
 const { body,validationResult } = require('express-validator')
+const jwt = require("jsonwebtoken");
+const async = require("async");
 
 
 exports.comment_post = [
@@ -11,10 +13,11 @@ exports.comment_post = [
         if (!errors.isEmpty()) {
             res.status(400).json({errors: errors.array()});
         } else {
+            const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
             const comment = new Comment(
                 {
                     content: req.body.content,
-                    author: req.body.author, // use JWT payload instead
+                    author: decoded._id,
                     post: req.params.postid,
                     timestamp: Date.now()
                 }
@@ -30,7 +33,7 @@ exports.comment_post = [
 
 // Find comments for specific post
 exports.comments_get = (req, res, next) => {
-    Comment.find({post: req.params.postid}).select({post: 0}).populate("author", "first_name last_name avatar").exec((err, comment_list) => {
+    Comment.find({post: req.params.postid}).select({post: 0}).populate("author", "_id first_name last_name avatar").exec((err, comment_list) => {
         if (err) return next(err);
         if (comment_list == null || comment_list == "") {
             const error = new Error("Comments not found");
@@ -63,19 +66,36 @@ exports.comment_put = [
         if (!errors.isEmpty()) {
             res.status(400).json({errors: errors.array()});
         } else {
-            const comment = new Comment(
-                {
-                    content: req.body.content,
-                    author: decoded._id,
-                    post: req.params.postid,
-                    timestamp: Date.now(),
-                    _id: req.params.commentid
-                }
-            )
-
-            Comment.findByIdAndUpdate(req.params.commentid, comment, {}, (err) => {
+            Comment.findById(req.params.commentid).exec((err, oldcomment) => {
                 if (err) return next(err);
-                res.status(200).json({message: "The comment was updated succesfully"})
+
+                if (oldcomment.author.toString() !== decoded._id) {
+                    const error = new Error("No authorization.");
+                    error.status = 401;
+                    return next(error);
+                }
+
+                if (oldcomment.post.toString() !== req.params.postid) {
+                    const error = new Error("Wrong parent post ID.");
+                    error.status = 400;
+                    return next(error);
+                }
+
+                const comment = new Comment(
+                    {
+                        content: req.body.content,
+                        author: decoded._id,
+                        post: req.params.postid,
+                        timestamp: oldcomment.timestamp,
+                        edit_timestamp: Date.now(),
+                        _id: req.params.commentid
+                    }
+                )
+    
+                Comment.findByIdAndUpdate(req.params.commentid, comment, {}, (err) => {
+                    if (err) return next(err);
+                    res.status(200).json({status: 200, message: "The comment was updated succesfully"})
+                })
             })
         }
     }
@@ -88,6 +108,7 @@ exports.comment_delete = (req, res, next) => {
         },
     }, (err, results) => {
         if (err) return next(err);
+        const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
 
         if (results == null) {
             const error = new Error("Comment not found");
@@ -95,9 +116,21 @@ exports.comment_delete = (req, res, next) => {
             return next(error);
         }
 
+        if (results.comment.author.toString() !== decoded._id) {
+            const error = new Error("No authorization.");
+            error.status = 401;
+            return next(error);
+        }
+
+        if (results.comment.post.toString() !== req.params.postid) {
+            const error = new Error("Wrong parent post ID.")
+            error.status = 400;
+            return next(error);
+        }
+
         Comment.findByIdAndDelete(req.params.commentid, (err) => {
             if (err) return next(err);
-            res.status(204).json({message: "The comment was deleted successfully"});
+            res.status(200).json({status: 200, message: "The comment was deleted successfully"});
         })
     })
 }

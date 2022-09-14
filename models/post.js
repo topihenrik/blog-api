@@ -10,6 +10,7 @@ const PostSchema = new Schema(
         description: {type: String, required: true},
         author: {type: Schema.Types.ObjectId, ref: "User"},
         timestamp: {type: Date, required: true, default: Date.now},
+        edit_timestamp: {type: Date, default: undefined},
         photo: {
             contentType: {type: String, default: "image/webp"},
             path: {type: String, default: () => {return "images/posts/default-"+Math.ceil(Math.random() * 3).toString()+".webp";}}

@@ -7,12 +7,22 @@ const user_controller = require("../controllers/userController");
 
 
 // POST ROUTES
+
+//CREATE
 // POST create single post
 router.post("/posts", post_controller.post_post);
+
+//READ
 // GET single post from specific author
 router.get("/posts/author", post_controller.get_posts_author);
+// GET specific post with comment count
+router.get("/posts/:postid", post_controller.get_post_commentcount);
+
+// UPDATE
 // PUT update single post
-router.put("/posts/:postid", post_controller.post_put);
+router.put("/posts", post_controller.post_put);
+
+// DELETE
 // DELETE delete single post
 router.delete("/posts/:postid", post_controller.post_delete);
 
