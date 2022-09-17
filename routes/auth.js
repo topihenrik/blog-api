@@ -18,24 +18,24 @@ router.get("/posts/author", post_controller.get_posts_author);
 // GET specific post with comment count
 router.get("/posts/:postid", post_controller.get_post_commentcount);
 // GET specific post for updating
-router.get("/posts/:postid/edit", post_controller.post_get_edit);
+router.get("/posts/:postid/edit", post_controller.get_post_edit);
 
 // UPDATE
 // PUT update single post
-router.put("/posts", post_controller.post_put);
+router.put("/posts", post_controller.put_post);
 
 // DELETE
 // DELETE delete single post
-router.delete("/posts/:postid", post_controller.post_delete);
+router.delete("/posts/:postid", post_controller.delete_post);
 
 
 // COMMNENT ROUTES
 // POST create single comment
-router.post("/posts/:postid/comments", comment_controller.comment_post)
+router.post("/posts/:postid/comments", comment_controller.post_comment)
 // PUT update single post
-router.put("/posts/:postid/comments/:commentid", comment_controller.comment_put)
+router.put("/posts/:postid/comments/:commentid", comment_controller.put_comment)
 // DELETE delete single post
-router.delete("/posts/:postid/comments/:commentid", comment_controller.comment_delete)
+router.delete("/posts/:postid/comments/:commentid", comment_controller.delete_comment)
 
 
 // USER ROUTES

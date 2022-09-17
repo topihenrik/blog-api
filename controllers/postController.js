@@ -20,7 +20,6 @@ const window = new JSDOM("").window;
 const DOMPurify = createDOMPurify(window);
 
 
-
 exports.post_post = [
     upload.single("photo"),
     body("title", "Title must be specified").trim().isLength({min:1}).escape(),
@@ -84,8 +83,9 @@ exports.post_post = [
     }
 ]
 
+
 // GET all posts. Includes a comment count. Value "published" needs to be true.
-exports.posts_get = (req, res, next) => {
+exports.get_posts = (req, res, next) => {
     Post.find({published: true}, {content: 0}).populate("author", "first_name last_name avatar").lean().exec((err, post_list) => {
         if (err) return next(err);
         if (post_list == null) {
@@ -120,8 +120,9 @@ exports.posts_get = (req, res, next) => {
     })
 }
 
+
 // GET single post based on postID. Value "published" needs to be true.
-exports.post_get = (req, res, next) => {
+exports.get_post = (req, res, next) => {
     Post.findById(req.params.postid).populate("author", "first_name last_name avatar").exec((err, thepost) => {
         if (err) return next(err);
         if (thepost === null) {
@@ -140,8 +141,9 @@ exports.post_get = (req, res, next) => {
     })
 }
 
+
 // GET single post based on postID. Requires the requestee to be the author.
-exports.post_get_edit = (req, res, next) => {
+exports.get_post_edit = (req, res, next) => {
     const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
     Post.findById(req.params.postid).populate("author", "first_name last_name avatar").exec((err, thepost) => {
         if (err) return next(err);
@@ -227,7 +229,7 @@ exports.get_posts_author = (req, res, next) => {
 
 
 // PUT update single post
-exports.post_put = [
+exports.put_post = [
     upload.single("photo"),
     body("title", "Title must be specified").trim().isLength({min:1}).escape(),
     body("content", "Content must be specified").isLength({min:5}),
@@ -324,7 +326,7 @@ exports.post_put = [
 ]
 
 
-exports.post_delete = (req, res, next) => {
+exports.delete_post = (req, res, next) => {
     async.parallel({
         post(cb) {
             Post.findById(req.params.postid).exec(cb);

@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const async = require("async");
 
 
-exports.comment_post = [
+exports.post_comment = [
     body("content", "Content must be specified").trim().isLength({min:1}).escape(),
 
     (req, res, next) => {
@@ -31,8 +31,9 @@ exports.comment_post = [
     }
 ]
 
+
 // Find comments for specific post
-exports.comments_get = (req, res, next) => {
+exports.get_comments = (req, res, next) => {
     Comment.find({post: req.params.postid}).select({post: 0}).populate("author", "_id first_name last_name avatar").exec((err, comment_list) => {
         if (err) return next(err);
         if (comment_list == null || comment_list == "") {
@@ -44,7 +45,8 @@ exports.comments_get = (req, res, next) => {
     });
 }
 
-exports.comment_get = (req, res, next) => {
+
+exports.get_comment = (req, res, next) => {
     Comment.findById(req.params.commentid).select({post: 0}).populate("author", "first_name last_name avatar").exec((err, thecomment) => {
         if (err) return next(err);
         if (thecomment == null || thecomment == "") {
@@ -56,7 +58,8 @@ exports.comment_get = (req, res, next) => {
     })
 }
 
-exports.comment_put = [
+
+exports.put_comment = [
     body("content", "Content must be specified").trim().isLength({min:1}).escape(),
 
     (req, res, next) => {
@@ -101,7 +104,8 @@ exports.comment_put = [
     }
 ]
 
-exports.comment_delete = (req, res, next) => {
+
+exports.delete_comment = (req, res, next) => {
     async.parallel({
         comment(cb) {
             Comment.findById(req.params.commentid).exec(cb);
