@@ -17,6 +17,8 @@ router.post("/posts", post_controller.post_post);
 router.get("/posts/author", post_controller.get_posts_author);
 // GET specific post with comment count
 router.get("/posts/:postid", post_controller.get_post_commentcount);
+// GET specific post for updating
+router.get("/posts/:postid/edit", post_controller.post_get_edit);
 
 // UPDATE
 // PUT update single post

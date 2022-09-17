@@ -84,20 +84,43 @@ exports.post_post = [
     }
 ]
 
-// GET all posts
+// GET all posts. Includes a comment count. Value "published" needs to be true.
 exports.posts_get = (req, res, next) => {
-    Post.find().populate("author", "first_name last_name avatar").exec((err, post_list) => {
+    Post.find({published: true}, {content: 0}).populate("author", "first_name last_name avatar").lean().exec((err, post_list) => {
         if (err) return next(err);
         if (post_list == null) {
             const error = new Error("No post found");
             err.status = 404;
             return next(error);
         }
-        res.status(200).json({post_list: post_list})
+
+        let post_list_with_count = [];
+        const promises = post_list.map((post) => {
+            return new Promise((resolve, reject) => {
+                let post_new = {};
+                Comment.countDocuments({post: post._id.toString()}, (err, count) => {
+                    if (err) return reject(err);
+                    post_new = {
+                        ...post,
+                        count: count
+                    }
+                    post_list_with_count.push(post_new)
+                    resolve();
+                })
+            }) 
+        })
+
+        Promise.all(promises)
+            .then(() => {
+                res.status(200).json({post_list: post_list_with_count})
+            })
+            .catch((err) => {
+                return next(err)
+            })
     })
 }
 
-// GET single post based on postID
+// GET single post based on postID. Value "published" needs to be true.
 exports.post_get = (req, res, next) => {
     Post.findById(req.params.postid).populate("author", "first_name last_name avatar").exec((err, thepost) => {
         if (err) return next(err);
@@ -106,6 +129,34 @@ exports.post_get = (req, res, next) => {
             error.status = 404;
             return next(error);
         }
+
+        if (thepost.published === false) {
+            const error = new Error("This post has not been published")
+            error.status = 404;
+            return next(error);
+        }
+
+        res.status(200).json({status: 200, post_list: thepost})
+    })
+}
+
+// GET single post based on postID. Requires the requestee to be the author.
+exports.post_get_edit = (req, res, next) => {
+    const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+    Post.findById(req.params.postid).populate("author", "first_name last_name avatar").exec((err, thepost) => {
+        if (err) return next(err);
+        if (thepost === null) {
+            const error = new Error("No post found");
+            error.status = 404;
+            return next(error);
+        }
+
+        if (thepost.author._id.toString() !== decoded._id) {
+            const error = new Error("No authorization.");
+            error.status = 401;
+            return next(error);
+        }
+
         res.status(200).json({status: 200, post_list: thepost})
     })
 }
@@ -132,14 +183,45 @@ exports.get_post_commentcount = (req, res, next) => {
 exports.get_posts_author = (req, res, next) => {
     const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
 
-    Post.find({author: decoded._id}).populate("author", "first_name last_name avatar").exec((err, post_list) => {
+    Post.find({author: decoded._id}).populate("author", "first_name last_name avatar").lean().exec((err, post_list) => {
         if (err) return next(err);
         if (post_list === null) {
             const error = new Error("No post found");
             error.status = 404;
             return next(error);
         }
-        res.status(200).json({post_list: post_list})
+
+        // Check if the requestee is the author.
+        console.log("decoded._id:", decoded._id);
+        if (post_list[0]?.author._id.toString() !== decoded._id) {
+            const error = new Error("No authorization");
+            error.status = 401;
+            return next(error);
+        }
+
+        let post_list_with_count = [];
+        const promises = post_list.map((post) => {
+            return new Promise((resolve, reject) => {
+                let post_new = {};
+                Comment.countDocuments({post: post._id.toString()}, (err, count) => {
+                    if (err) return reject(err);
+                    post_new = {
+                        ...post,
+                        count: count
+                    }
+                    post_list_with_count.push(post_new);
+                    resolve();
+                })
+            })
+        })
+
+        Promise.all(promises)
+            .then(() => {
+                res.status(200).json({post_list: post_list_with_count})
+            })
+            .catch((err) => {
+                return next(err);
+            })      
     })
 }
 
