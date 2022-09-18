@@ -5,7 +5,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var mongoose = require("mongoose");
 var cors = require("cors")
-/* const bodyParser = require("body-parser"); */
+var multer = require("multer");
 require("dotenv").config();
 var blogRouter = require("./routes/blog");
 var authRouter = require("./routes/auth");
@@ -50,6 +50,11 @@ app.use(function(req, res, next) {
 
 // error handler
 app.use(function(err, req, res, next) {
+  // handling multer error
+  if (err instanceof multer.MulterError) {
+    err.status = 413;
+    err.message = "File too large, max size is 2MB";
+  }
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};

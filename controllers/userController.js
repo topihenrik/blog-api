@@ -6,20 +6,28 @@ const jwt = require("jsonwebtoken")
 require("dotenv").config();
 const {nanoid} = require("nanoid");
 
-
-
-// setup sharp
-const fileFilter = (req, file, cb) => {
-    console.log(file.buffer);
-}
-
-
-// setup multer
+// setup multer and sharp
 const multer = require("multer");
 const sharp = require("sharp")
 const storage = multer.memoryStorage();
-const upload = multer({storage: storage});
 
+const fileFilter = (req, file, cb) => {
+    console.log(file);
+    if ((file.mimetype === "image/png") || (file.mimetype === "image/jpeg")) {
+        cb(null, true);
+    } else {
+        cb(null, false);
+    }
+}
+
+const limits = {
+    fields: 100,
+    fileSize: 2097152,
+    files: 1,
+    parts: 100
+}
+
+const upload = multer({storage: storage, limits: limits, fileFilter: fileFilter});
 
 
 exports.post_user = [
@@ -95,6 +103,7 @@ exports.post_user = [
     }
 ]
 
+
 exports.post_login = (req, res1, next) => {
     User.findOne({email: req.body.email}, (err, user) => {
         if (err) return next(err);
@@ -140,6 +149,7 @@ exports.get_users = (req, res, next) => {
     })
 }
 
+
 exports.get_user = (req, res, next) => {
     User.findById(req.params.userid, "_id first_name last_name email").exec((err, theuser) => {
         if (err) return next(err)
@@ -151,6 +161,7 @@ exports.get_user = (req, res, next) => {
         res.json({user: theuser});
     })
 }
+
 
 exports.put_user = [
     body("first_name", "First name has to be specified").trim().isLength({min:1}).isAlphanumeric().escape(),
@@ -190,6 +201,7 @@ exports.put_user = [
     }
 
 ]
+
 
 exports.delete_user = (req, res, next) => {
     async.parallel({

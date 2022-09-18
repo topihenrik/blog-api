@@ -6,11 +6,30 @@ const { body,validationResult } = require('express-validator');
 const {nanoid} = require("nanoid");
 const async = require("async");
 
-// setup multer
+// setup multer and sharp
 const multer = require("multer");
 const sharp = require("sharp");
 const storage = multer.memoryStorage();
-const upload = multer({storage: storage});
+
+const fileFilter = (req, file, cb) => {
+    console.log(file);
+    if ((file.mimetype === "image/png") || (file.mimetype === "image/jpeg")) {
+        cb(null, true);
+    } else {
+        cb(null, false);
+    }
+}
+
+const limits = {
+    fields: 100,
+    fileSize: 2097152,
+    files: 1,
+    parts: 100
+}
+
+const upload = multer({storage: storage, limits: limits, fileFilter: fileFilter});
+
+
 
 // setup dompurify
 const createDOMPurify = require("dompurify");
