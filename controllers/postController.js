@@ -41,9 +41,10 @@ const DOMPurify = createDOMPurify(window);
 
 exports.post_post = [
     upload.single("photo"),
-    body("title", "Title must be specified").trim().isLength({min:1}).escape(),
-    body("content", "Content must be specified").isLength({min:5}),
-    body("description", "Description must be specified").trim().isLength({min:5}).escape(),
+    body("title", "Define title using a Heading 1 element. Minimum length is 5 characters.").trim().isLength({min:5}).escape(),
+    body("content", "Content must be defined. Minimum length is 10 characters.").isLength({min:10}),
+    body("description", "Define description using a paragraph element. Minimum length is 5 characters.").trim().isLength({min:5}).escape(),
+    body("published", "Published value must be a boolean.").isBoolean().escape(),
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -250,10 +251,11 @@ exports.get_posts_author = (req, res, next) => {
 // PUT update single post
 exports.put_post = [
     upload.single("photo"),
-    body("title", "Title must be specified").trim().isLength({min:1}).escape(),
-    body("content", "Content must be specified").isLength({min:5}),
-    body("description", "Description must be specified").trim().isLength({min:5}).escape(),
+    body("title", "Define title using a Heading 1 element. Minimum length is 5 characters.").trim().isLength({min:5}).escape(),
+    body("content", "Content must be defined. Minimum length is 10 characters.").isLength({min:10}),
+    body("description", "Define description using a paragraph element. Minimum length is 5 characters.").trim().isLength({min:5}).escape(),
     body("postID", "Post ID must be specified").trim().isLength({min:1}).escape(),
+    body("published", "Published value must be a boolean.").isBoolean().escape(),
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -276,6 +278,11 @@ exports.put_post = [
                     return next(error);
                 }
                 
+                // Published post can't be unpublished
+                if (oldpost.published && !JSON.parse(req.body.published)) {
+                    req.body.published = true;
+                }
+
                 // Optimize if the user submits a new photo. Otherwise use the old one.
                 if(req.file) { // New photo uploaded
                     const fileName = "images/posts/" + nanoid() + ".webp";
@@ -311,7 +318,7 @@ exports.put_post = [
                                 }
                             }
 
-                            res.status(200).json({status: 200, message: "The post was updated succesfully"});
+                            res.status(201).json({status: 201, message: "The post was updated succesfully"});
                         })
                     })
                 } else { // No new photo;
@@ -334,7 +341,7 @@ exports.put_post = [
         
                     Post.findByIdAndUpdate(req.body.postID, post, {}, (err) => {
                         if (err) return next(err);
-                        res.status(200).json({status: 200, message: "The post was updated succesfully"});
+                        res.status(201).json({status: 201, message: "The post was updated succesfully"});
                     })
 
                 }
