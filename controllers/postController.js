@@ -67,6 +67,7 @@ exports.post_post = [
                             timestamp: Date.now(),
                             photo: {
                                 contentType: "image/webp",
+                                originalName: req.file.originalname,
                                 path: fileName
                             },
                             published: req.body.published
@@ -88,6 +89,7 @@ exports.post_post = [
                         timestamp: Date.now(),
                         photo: {
                             contentType: undefined,
+                            originalName: "default.webp",
                             path: undefined
                         },
                         published: req.body.published
@@ -299,6 +301,7 @@ exports.put_post = [
                                 edit_timestamp: Date.now(),
                                 photo: {
                                     contentType: "image/webp",
+                                    originalName: req.file.originalname,
                                     path: fileName
                                 },
                                 published: req.body.published,
@@ -332,6 +335,7 @@ exports.put_post = [
                             edit_timestamp: Date.now(),
                             photo: {
                                 contentType: oldpost.photo.contentType,
+                                originalName: oldpost.photo.originalName,
                                 path: oldpost.photo.path
                             },
                             published: req.body.published,

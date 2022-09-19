@@ -13,6 +13,7 @@ const PostSchema = new Schema(
         edit_timestamp: {type: Date, default: undefined},
         photo: {
             contentType: {type: String, default: "image/webp"},
+            originalName: {type: String},
             path: {type: String, default: () => {return "images/posts/default-"+Math.ceil(Math.random() * 3).toString()+".webp";}}
         },
         published: {type: Boolean, default: false}
