@@ -35,7 +35,7 @@ exports.post_user = [
     body("first_name", "first name has to be specified").trim().isLength({min:1}).isAlphanumeric().escape(),
     body("last_name", "last name has to be specified").trim().isLength({min: 1}).isAlphanumeric().escape(),
     body("email", "email has to be specified").trim().isEmail().isLength({min:1}).escape(),
-    body("password", "password must be specified")
+    body("password", "password must be specified").isLength({min:1})
     .custom((value, {req}) => {
         if (value !== req.body.password_confirm) {
             throw new Error("passwords don't match");
