@@ -1,4 +1,5 @@
 const Comment = require("../models/comment")
+const Post = require("../models/post");
 const { body,validationResult } = require('express-validator')
 const jwt = require("jsonwebtoken");
 const async = require("async");
@@ -13,20 +14,36 @@ exports.post_comment = [
         if (!errors.isEmpty()) {
             res.status(400).json({errors: errors.array()});
         } else {
-            const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
-            const comment = new Comment(
-                {
-                    content: req.body.content,
-                    author: decoded._id,
-                    post: req.params.postid,
-                    timestamp: Date.now()
-                }
-            )
 
-            comment.save((err) => {
+            Post.findById(req.params.postid).exec((err, thepost) => {
                 if (err) return next(err);
-                res.status(201).json({message: "The message was created successfully", status: 201});
-            }) 
+
+                // If the post doesnt exist. Don't allow comment creation.
+                if (!thepost) {
+                    const error = new Error("Comments parent post doesn't exist.")
+                    error.status = 404;
+                    return next(error);
+                }
+                
+
+                const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+                const comment = new Comment(
+                    {
+                        content: req.body.content,
+                        author: decoded._id,
+                        post: req.params.postid,
+                        timestamp: Date.now()
+                    }
+                )
+
+                comment.save((err) => {
+                    if (err) return next(err);
+                    res.status(201).json({message: "The message was created successfully", status: 201});
+                }) 
+
+
+
+            })
         }
     }
 ]

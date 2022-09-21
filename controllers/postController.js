@@ -195,7 +195,8 @@ exports.get_post_commentcount = (req, res, next) => {
             error.status = 404;
             return next(error);
         }
-        Comment.find({post: req.params.postid}).count((err, count) => {
+
+        Comment.countDocuments({post: req.params.postid}, (err, count) => {
             if (err) return next(err);
             res.status(200).json({status: 200, post_list: thepost, count: count})
         })
