@@ -6,11 +6,14 @@ const UserSchema = new Schema(
         first_name: {type: String, required: true},
         last_name: {type: String, required: true},
         email: {type: String, required: true},
+        dob: {type: Date, required: true},
         password: {type: String, required: true},
         avatar: {
             contentType: {type: String, default: "image/png"},
+            originalName: {type: String, default: "default.png"},
             path: {type: String, default: "images/users/default.png"}
-        }
+        },
+        creation_date: {type: Date, required: true, default: Date.now}
     }
 )
 

@@ -1,10 +1,13 @@
 const User = require("../models/user")
+const Post = require("../models/post")
+const Comment = require("../models/comment")
 const { body, validationResult } = require('express-validator')
 const async = require("async")
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 require("dotenv").config();
 const {nanoid} = require("nanoid");
+const fs = require("fs");
 
 // setup multer and sharp
 const multer = require("multer");
@@ -35,6 +38,7 @@ exports.post_user = [
     body("first_name", "first name has to be specified").trim().isLength({min:1}).isAlphanumeric().escape(),
     body("last_name", "last name has to be specified").trim().isLength({min: 1}).isAlphanumeric().escape(),
     body("email", "email has to be specified").trim().isEmail().isLength({min:1}).escape(),
+    body("dob", "date of birth has to be specified").isDate().isLength({min:1}).escape(),
     body("password", "password must be specified").isLength({min:1})
     .custom((value, {req}) => {
         if (value !== req.body.password_confirm) {
@@ -44,49 +48,62 @@ exports.post_user = [
         }
     }),
     (req, res, next) => {
-        let fileName = undefined;
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            res.status(400).json({errors: errors.array()});
+        } else {
+            User.findOne({email: req.body.email}, (err, user) => {
+                if (err) return next(err);
+                if (user !== null) {
+                    const error = new Error("that email is already taken");
+                    error.status = 409;
+                    return next(error);
+                }
 
-        const optimizeImage = async () => {
-            if (req.file) {
-                fileName = "images/users/" + nanoid() + ".webp";
-                sharp(req.file.buffer).resize(256).webp({lossless: true}).toFile("public/"+fileName, (err) => {
-                    if (err) return next(err);
-                })
-            } 
-        };
+                if (req.file) { // New photo
+                    const fileName = "images/users/" + nanoid() + ".webp";
+                    sharp(req.file.buffer).resize(256).webp({lossless: true}).toFile("public/"+fileName, (err) => {
+                        if (err) return next(err);
 
-        const otherStuff = async () => {
-            const errors = validationResult(req);
-            if (!errors.isEmpty()) {
-                res.status(400).json({errors: errors.array()});
-            } else {
-                User.findOne({email: req.body.email}, (err, user) => {
-                    if (err) return next(err);
-                    if (user !== null) {
-                        const error = new Error("that email is already taken");
-                        error.status = 409;
-                        return next(error);
-                    }
-    
+                        bcrypt.hash(req.body.password, 10, (err, hashedPassword) => {
+                            if (err) return next(err);
+
+                            const user = new User(
+                                {
+                                    first_name: req.body.first_name,
+                                    last_name: req.body.last_name,
+                                    email: req.body.email,
+                                    dob: new Date(req.body.dob),
+                                    password: hashedPassword,
+                                    avatar: {
+                                        contentType: "image/webp",
+                                        originalName: req.file.originalName,
+                                        path: fileName
+                                    }
+                                }
+                            )
+                
+                            user.save((err) => {
+                                if (err) return next(err);
+                                res.status(201).json({message: "The user was created successfully", status: 201});
+                            })
+                        })
+                    })
+                } else { // No photo, use default
                     bcrypt.hash(req.body.password, 10, (err, hashedPassword) => {
                         if (err) return next(err);
-    
-                        let contentType = undefined;
-                        let path = undefined;
-                        if (req.file) {
-                            contentType = "image/webp";
-                            path = fileName;
-                        }
-    
+
                         const user = new User(
                             {
                                 first_name: req.body.first_name,
                                 last_name: req.body.last_name,
                                 email: req.body.email,
+                                dob: new Date(req.body.dob),
                                 password: hashedPassword,
                                 avatar: {
-                                    contentType: contentType,
-                                    path: path
+                                    contentType: undefined,
+                                    originalName: undefined,
+                                    path: undefined
                                 }
                             }
                         )
@@ -96,10 +113,9 @@ exports.post_user = [
                             res.status(201).json({message: "The user was created successfully", status: 201});
                         })
                     })
-                })
-            }
+                }
+            })
         }
-        optimizeImage().then(otherStuff);
     }
 ]
 
@@ -136,7 +152,7 @@ exports.post_login = (req, res1, next) => {
     })
 }
 
-
+// not used?
 exports.get_users = (req, res, next) => {
     User.find({}, "_id first_name last_name email").exec((err, user_list) => {
         if (err) return next(err)
@@ -151,16 +167,147 @@ exports.get_users = (req, res, next) => {
 
 
 exports.get_user = (req, res, next) => {
-    User.findById(req.params.userid, "_id first_name last_name email").exec((err, theuser) => {
+    const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+    User.findById(decoded._id, "_id first_name last_name email dob avatar creation_date").exec((err, theuser) => {
         if (err) return next(err)
         if (theuser == null) {
             var error = new Error("No user found");
             error.status = 404;
             return next(error);
         }
-        res.json({user: theuser});
+
+        if (theuser._id.toString() !== decoded._id) {
+            var error = new Error("No authorization")
+            error.status = 401;
+            return next(error);
+        }
+
+        Post.countDocuments({author: decoded._id}, (err, postCount) => {
+            if (err) return next(err);
+            Comment.countDocuments({author: decoded._id}, (err, commentCount) => {
+                if (err) return next(err);
+                res.status(200).json({status: 200, user: theuser, postCount: postCount, commentCount: commentCount});
+            })
+        })
     })
 }
+
+exports.get_user_edit = (req, res, next) => {
+    const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+    User.findById(decoded._id, "_id first_name last_name email dob avatar").exec((err, theuser) => {
+        if (err) return next(err);
+        if (theuser == null) {
+            var error = new Error("No user found");
+            error.status = 404;
+            return next(error);
+        }
+
+        if (theuser._id.toString() !== decoded._id) {
+            var error = new Error("No authorization")
+            error.status = 401;
+            return next(error);
+        }
+
+        res.status(200).json({status: 200, user: theuser});
+    })
+}
+
+
+// Update USER basic information
+exports.put_user_basic = [
+    upload.single("avatar"),
+    body("first_name", "first name has to be specified").trim().isLength({min:1}).isAlphanumeric().escape(),
+    body("last_name", "last name has to be specified").trim().isLength({min: 1}).isAlphanumeric().escape(),
+    body("email", "email has to be specified").trim().isEmail().isLength({min:1}).escape(),
+    body("dob", "date of birth has to be specified").isDate().isLength({min:1}).escape(),
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            res.status(400).json({errors: errors.array()});
+        } else {
+            const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+
+            User.findById(decoded._id).exec((err, olduser) => {
+                if (err) return next(err);
+
+                if (olduser == null || olduser == "") {
+                    const error = new Error("User doesn't exist");
+                    error.status = 404;
+                    return next(error);
+                }
+
+
+                if (req.file) {
+                    const fileName = "images/users/" + nanoid() + ".webp";
+                    sharp(req.file.buffer).resize(256).webp({lossless: true}).toFile("public/"+fileName, (err) => {
+                        if (err) return next(err);
+
+                        const user = new User(
+                            {
+                                first_name: req.body.first_name,
+                                last_name: req.body.last_name,
+                                email: req.body.email,
+                                dob: new Date(req.body.dob),
+                                avatar: {
+                                    contentType: "image/webp",
+                                    originalName: req.file.originalName,
+                                    path: fileName
+                                },
+                                _id: decoded._id
+                            }
+                        )
+
+                        
+                        User.findByIdAndUpdate(decoded._id, user, {}, (err) => {
+                            if (err) return next(err);
+
+                            // If previous image is not a default avatar -> Delete it
+                            if (!olduser.avatar.path.includes("default")) {
+                                try {
+                                    fs.unlinkSync(process.cwd()+"/public/"+olduser.avatar.path);
+                                } catch (err) {
+                                    if (err) return next(err);
+                                }
+                            }
+
+                            res.status(201).json({status: 201, message: "The user was updated succesfully"});
+                        })
+
+
+                    })
+                } else {
+                    const user = new User(
+                        {
+                            first_name: req.body.first_name,
+                            last_name: req.body.last_name,
+                            email: req.body.email,
+                            dob: new Date(req.body.dob),
+                            avatar: {
+                                contentType: olduser.avatar.contentType,
+                                originalName: olduser.avatar.originalName,
+                                path: olduser.avatar.path
+                            },
+                            _id: decoded._id
+                        }
+                    )
+
+                    User.findByIdAndUpdate(decoded._id, user, {}, (err) => {
+                        if (err) return next(err);
+                        res.status(201).json({status: 201, message: "The user was updated succesfully"});
+                    })
+                }
+
+
+
+
+
+
+            })
+        }
+    }
+]
+
+
 
 
 exports.put_user = [

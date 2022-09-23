@@ -46,4 +46,15 @@ router.delete("/users/:userid", user_controller.delete_user)
 
 
 
+// PUT update single user basic information
+router.put("/user/basic", user_controller.put_user_basic);
+
+// GET all users
+router.get("/users", user_controller.get_users)
+// GET single user with full details
+router.get("/user", user_controller.get_user)
+// GET single user for editing
+router.get("/user/edit", user_controller.get_user_edit)
+
+
 module.exports = router;

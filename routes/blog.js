@@ -33,13 +33,7 @@ router.get("/posts/:postid/comments/:commentid", comment_controller.get_comment)
 router.post("/signup", user_controller.post_user)
 // POST login user
 router.post("/login", user_controller.post_login)
-// GET logout user
-router.get("/logout")
 
-// GET all users
-router.get("/users", user_controller.get_users)
-// GET single user
-router.get("/users/:userid", user_controller.get_user)
 
 
 
