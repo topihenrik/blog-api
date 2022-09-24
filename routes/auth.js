@@ -39,17 +39,13 @@ router.delete("/posts/:postid/comments/:commentid", comment_controller.delete_co
 
 
 // USER ROUTES
-// PUT update single user
-router.put("/users/:userid", user_controller.put_user)
-// DELETE delete single user
-router.delete("/users/:userid", user_controller.delete_user)
-
-
 
 // PUT update single user basic information
 router.put("/user/basic", user_controller.put_user_basic);
 // PUT update single user password
 router.put("/user/password", user_controller.put_user_password);
+// DELETE all info relating to single user.
+router.delete("/user/delete/all", user_controller.delete_user_all);
 
 // GET all users
 router.get("/users", user_controller.get_users)

@@ -31,7 +31,7 @@ const limits = {
 
 const upload = multer({storage: storage, limits: limits, fileFilter: fileFilter});
 
-
+// POST Signup User
 exports.post_user = [
     upload.single("avatar"),
     body("first_name", "first name has to be specified").trim().isLength({min:1}).isAlphanumeric().escape(),
@@ -118,7 +118,7 @@ exports.post_user = [
     }
 ]
 
-
+// POST Login User
 exports.post_login = (req, res1, next) => {
     User.findOne({email: req.body.email}, (err, user) => {
         if (err) return next(err);
@@ -154,20 +154,7 @@ exports.post_login = (req, res1, next) => {
     })
 }
 
-// not used?
-exports.get_users = (req, res, next) => {
-    User.find({}, "_id first_name last_name email").exec((err, user_list) => {
-        if (err) return next(err)
-        if (user_list == null) {
-            var error = new Error("No users found");
-            error.status = 404;
-            return next(error);
-        } 
-        res.json({user_list: user_list});
-    })
-}
-
-
+// GET single user data for display
 exports.get_user = (req, res, next) => {
     const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
     User.findById(decoded._id, "_id first_name last_name email dob avatar creation_date").exec((err, theuser) => {
@@ -194,6 +181,7 @@ exports.get_user = (req, res, next) => {
     })
 }
 
+// GET single user data for editing
 exports.get_user_edit = (req, res, next) => {
     const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
     User.findById(decoded._id, "_id first_name last_name email dob avatar").exec((err, theuser) => {
@@ -214,8 +202,7 @@ exports.get_user_edit = (req, res, next) => {
     })
 }
 
-
-// Update USER basic information
+// Update User basic information
 exports.put_user_basic = [
     upload.single("avatar"),
     body("first_name", "first name has to be specified").trim().isLength({min:1}).isAlphanumeric().escape(),
@@ -308,7 +295,7 @@ exports.put_user_basic = [
     }
 ]
 
-// Update password
+// Update User password
 exports.put_user_password = [
     body("old_password", "old password must be specified").isLength({min:1}),
     body("password", "password must be specified").isLength({min:1})
@@ -365,62 +352,73 @@ exports.put_user_password = [
     }
 ]
 
-
-
-exports.put_user = [
-    body("first_name", "First name has to be specified").trim().isLength({min:1}).isAlphanumeric().escape(),
-    body("last_name", "Last name has to be specified").trim().isLength({min: 1}).isAlphanumeric().escape(),
-    body("email", "Email has to be specified").trim().isEmail().isLength({min:1}).escape(),
-    body("password", "Password must be specified")
-    .custom((value, {req, loc, path}) => {
-        if (value !== req.body.password_confirm) {
-            throw new Error("Passwords don't match");
-        } else {
-            return value;
+// Deletes users all posts and comments. All comments from users posts will be deleted aswell. User itself will also be deleted.
+exports.delete_user_all = (req, res, next) => {
+    const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+    User.findById(decoded._id).exec((err, theuser) => {
+        if (err) return next(err);
+        if (theuser === null) {
+            const error = new Error("The user doesnt exist");
+            error.status = 404;
+            return next(error);
         }
-    }),
-
-    (req, res, next) => {
-        const errors = validationResult(req);
-
-        const user = new User(
-            {
-                first_name: req.body.first_name,
-                last_name: req.bodt.last_name,
-                email: req.body.email,
-                password: req.body.password,
-                _id: req.params.userid
-            }
-        )
-
-        if (errors.isEmpty()) {
-            res.status(400).json({errors: errors.array()})
-            return;
-        } else {
-            User.findByIdAndUpdate(req.params.userid, user, {}, (err, theuser) => {
-                if (err) return next(err);
-                res.status(200).json({message: "The user was updated successfully"});
-            })
-        }
-    }
-
-]
-
-
-exports.delete_user = (req, res, next) => {
-    async.parallel({
-        user(cb) {
-            User.findById(req.params.userid).exec(cb);
-        },
-    }, (err, results) => {
-        if(err) return next(err)
-        if (results.user == null) {
-            res.status(404).json({message: "The user does not exist"})
-        }
-
-        User.findByIdAndDelete(req.params.userid, (err) => {
+        bcrypt.compare(req.body.password, theuser.password, (err, result) => {
             if (err) return next(err);
-            res.status(204).json({message: "The user was deleted successfully"})
+            if (result) { // Passwords match
+                // Find Users all Posts
+                Post.find({author: decoded._id}).exec((err, posts_list) => {
+                    if (err) return next(err);
+                    posts_list.forEach((post) => {
+                        // Find all Comments from Users Posts
+                        Comment.find({post: post._id}).exec((err, comments_list) => {
+                            if (err) return next(err);
+                            comments_list.forEach((comment) => {
+                                // Delete single Comment from the Users Post
+                                Comment.findByIdAndDelete(comment._id, (err) => {
+                                    if (err) return next(err);
+                                })
+                            })
+                        })
+                        // Delete Post db data and server photo file
+                        Post.findByIdAndDelete(post._id, (err) => {
+                            if (err) return next(err);
+                            if (!post.photo.path.includes("default-")) {
+                                try {
+                                    fs.unlinkSync(process.cwd()+"/public/"+post.photo.path);
+                                } catch(err) {
+                                    if (err) return next(err);
+                                }
+                            }
+                        })
+                    })
+                    // Find Users all Comments
+                    Comment.find({author: decoded._id}).exec((err, comments_list) => {
+                        if (err) return next(err);
+                        comments_list.forEach((comment) => {
+                            Comment.findByIdAndDelete(comment._id, (err) => {
+                                if (err) return next(err);
+                            })
+                        })
+
+                        // Delete User db data and server avatar file
+                        User.findByIdAndDelete(decoded._id, (err) => {
+                            if (err) return next(err);
+                            if (!theuser.avatar.path.includes("default")) {
+                                try {
+                                    fs.unlinkSync(process.cwd()+"/public/"+theuser.avatar.path);
+                                } catch(err) {
+                                    if (err) return next(err);
+                                }
+                            }
+                            res.status(200).json({status: 200, message: "The user information was deleted successfully"});
+                        })
+                    })
+                })
+            } else { // Passwords dont match
+                const error = new Error("Incorrect creditentials");
+                error.status = 401;
+                return next(error);
+            }
         })
     })
 }
