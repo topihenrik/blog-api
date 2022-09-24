@@ -46,9 +46,6 @@ router.put("/user/basic", user_controller.put_user_basic);
 router.put("/user/password", user_controller.put_user_password);
 // DELETE all info relating to single user.
 router.delete("/user/delete/all", user_controller.delete_user_all);
-
-// GET all users
-router.get("/users", user_controller.get_users)
 // GET single user with full details
 router.get("/user", user_controller.get_user)
 // GET single user for editing
