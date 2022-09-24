@@ -34,11 +34,6 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-/* app.use((req, res, next) => {
-  console.log(req.body);
-  next();
-}) */
-
 // routes
 app.use("/", blogRouter);
 app.use("/auth", passport.authenticate("jwt", {session: false}), authRouter);

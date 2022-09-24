@@ -15,7 +15,6 @@ const sharp = require("sharp")
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-    console.log(file);
     if ((file.mimetype === "image/png") || (file.mimetype === "image/jpeg")) {
         cb(null, true);
     } else {
@@ -77,7 +76,7 @@ exports.post_user = [
                                     password: hashedPassword,
                                     avatar: {
                                         contentType: "image/webp",
-                                        originalName: req.file.originalName,
+                                        originalName: req.file.originalname,
                                         path: fileName
                                     }
                                 }
@@ -135,13 +134,16 @@ exports.post_login = (req, res1, next) => {
                 
                 const token = jwt.sign({_id: user._id, email: user.email}, process.env.AUTH_SECRET, {expiresIn: "20h"})
                 res1.status(200).json(
-                    {message: "Authorization succesful", 
-                    token: token,
-                    user: {
-                        _id: user._id,
-                        full_name: user.first_name + " " + user.last_name, 
-                    }, 
-                    status: 201})
+                    {
+                        message: "Authorization succesful", 
+                        token: token,
+                        user: {
+                            _id: user._id,
+                            full_name: user.first_name + " " + user.last_name, 
+                        }, 
+                        status: 201
+                    }
+                )
             } else {
                 // Password don't match.
                 let error = new Error("Incorrect creditentials");
@@ -237,11 +239,10 @@ exports.put_user_basic = [
                 }
 
 
-                if (req.file) {
+                if (req.file) { // New avatar
                     const fileName = "images/users/" + nanoid() + ".webp";
                     sharp(req.file.buffer).resize(256).webp({lossless: true}).toFile("public/"+fileName, (err) => {
                         if (err) return next(err);
-
                         const user = new User(
                             {
                                 first_name: req.body.first_name,
@@ -250,7 +251,7 @@ exports.put_user_basic = [
                                 dob: new Date(req.body.dob),
                                 avatar: {
                                     contentType: "image/webp",
-                                    originalName: req.file.originalName,
+                                    originalName: req.file.originalname,
                                     path: fileName
                                 },
                                 _id: decoded._id
@@ -275,7 +276,7 @@ exports.put_user_basic = [
 
 
                     })
-                } else {
+                } else { // No new avatar
                     const user = new User(
                         {
                             first_name: req.body.first_name,
@@ -307,6 +308,62 @@ exports.put_user_basic = [
     }
 ]
 
+// Update password
+exports.put_user_password = [
+    body("old_password", "old password must be specified").isLength({min:1}),
+    body("password", "password must be specified").isLength({min:1})
+    .custom((value, {req}) => {
+        if (value !== req.body.password_confirm) {
+            throw new Error("passwords don't match");
+        } else {
+            return value;
+        }
+    }),
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            res.status(400).json({errors: errors.array()});
+        } else {
+            const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+            User.findById(decoded._id).exec((err, olduser) => {
+                if(err) return next(err);
+
+                if (olduser == null || olduser == "") {
+                    const error = new Error("User doesn't exist");
+                    error.status = 404;
+                    return next(error);
+                }
+
+                bcrypt.compare(req.body.old_password, olduser.password, (err, result) => {
+                    if (err) return next(err);
+                    if (result) {
+                        // Old Password matches -> Allow to change password
+                        bcrypt.hash(req.body.password, 10, (err, hashedPassword) => {
+                            if (err) return next(err);
+
+                            const user = new User(
+                                {
+                                    password: hashedPassword,
+                                    _id: decoded._id
+                                }
+                            )
+
+                            User.findByIdAndUpdate(decoded._id, user, {}, (err) => {
+                                if (err) return next(err);
+                                res.status(201).json({status: 201, message: "The user password was updated successfully"});
+                            })
+                        })
+                    } else {
+                        // Old Password doesn't match.
+                        const error = new Error("Incorrect creditentials");
+                        error.status = 401;
+                        return next(error);
+                    }
+                })
+            })
+        }
+    }
+]
 
 
 

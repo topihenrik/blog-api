@@ -48,6 +48,8 @@ router.delete("/users/:userid", user_controller.delete_user)
 
 // PUT update single user basic information
 router.put("/user/basic", user_controller.put_user_basic);
+// PUT update single user password
+router.put("/user/password", user_controller.put_user_password);
 
 // GET all users
 router.get("/users", user_controller.get_users)
