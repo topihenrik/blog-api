@@ -12,6 +12,7 @@ const fs = require("fs");
 // setup multer and sharp
 const multer = require("multer");
 const sharp = require("sharp")
+const e = require("express")
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
@@ -206,7 +207,7 @@ exports.get_user_edit = (req, res, next) => {
 exports.put_user_basic = [
     upload.single("avatar"),
     body("first_name", "first name has to be specified").trim().isLength({min:1}).isAlphanumeric().escape(),
-    body("last_name", "last name has to be specified").trim().isLength({min: 1}).isAlphanumeric().escape(),
+    body("last_name", "last name has to be specified").trim().isLength({min:1}).isAlphanumeric().escape(),
     body("email", "email has to be specified").trim().isEmail().isLength({min:1}).escape(),
     body("dob", "date of birth has to be specified").isDate().isLength({min:1}).escape(),
     (req, res, next) => {
@@ -225,11 +226,53 @@ exports.put_user_basic = [
                     return next(error);
                 }
 
+                User.findOne({email: req.body.email}, (err, email_check_user) => {
+                    if (err) return next(err);
 
-                if (req.file) { // New avatar
-                    const fileName = "images/users/" + nanoid() + ".webp";
-                    sharp(req.file.buffer).resize(256).webp({lossless: true}).toFile("public/"+fileName, (err) => {
-                        if (err) return next(err);
+                    if (email_check_user !== null && email_check_user._id.toString() !== decoded._id) {
+                        const error = new Error("that email is already taken");
+                        error.status = 409;
+                        return next(error);
+                    }
+
+                    if (req.file) { // New avatar
+                        const fileName = "images/users/" + nanoid() + ".webp";
+                        sharp(req.file.buffer).resize(256).webp({lossless: true}).toFile("public/"+fileName, (err) => {
+                            if (err) return next(err);
+                            const user = new User(
+                                {
+                                    first_name: req.body.first_name,
+                                    last_name: req.body.last_name,
+                                    email: req.body.email,
+                                    dob: new Date(req.body.dob),
+                                    avatar: {
+                                        contentType: "image/webp",
+                                        originalName: req.file.originalname,
+                                        path: fileName
+                                    },
+                                    _id: decoded._id
+                                }
+                            )
+    
+                            
+                            User.findByIdAndUpdate(decoded._id, user, {}, (err) => {
+                                if (err) return next(err);
+    
+                                // If previous image is not a default avatar -> Delete it
+                                if (!olduser.avatar.path.includes("default")) {
+                                    try {
+                                        fs.unlinkSync(process.cwd()+"/public/"+olduser.avatar.path);
+                                    } catch (err) {
+                                        if (err) return next(err);
+                                    }
+                                }
+    
+                                res.status(201).json({status: 201, message: "The user was updated succesfully"});
+                            })
+    
+    
+                        })
+                    } else { // No new avatar
                         const user = new User(
                             {
                                 first_name: req.body.first_name,
@@ -237,59 +280,20 @@ exports.put_user_basic = [
                                 email: req.body.email,
                                 dob: new Date(req.body.dob),
                                 avatar: {
-                                    contentType: "image/webp",
-                                    originalName: req.file.originalname,
-                                    path: fileName
+                                    contentType: olduser.avatar.contentType,
+                                    originalName: olduser.avatar.originalName,
+                                    path: olduser.avatar.path
                                 },
                                 _id: decoded._id
                             }
                         )
-
-                        
+    
                         User.findByIdAndUpdate(decoded._id, user, {}, (err) => {
                             if (err) return next(err);
-
-                            // If previous image is not a default avatar -> Delete it
-                            if (!olduser.avatar.path.includes("default")) {
-                                try {
-                                    fs.unlinkSync(process.cwd()+"/public/"+olduser.avatar.path);
-                                } catch (err) {
-                                    if (err) return next(err);
-                                }
-                            }
-
                             res.status(201).json({status: 201, message: "The user was updated succesfully"});
                         })
-
-
-                    })
-                } else { // No new avatar
-                    const user = new User(
-                        {
-                            first_name: req.body.first_name,
-                            last_name: req.body.last_name,
-                            email: req.body.email,
-                            dob: new Date(req.body.dob),
-                            avatar: {
-                                contentType: olduser.avatar.contentType,
-                                originalName: olduser.avatar.originalName,
-                                path: olduser.avatar.path
-                            },
-                            _id: decoded._id
-                        }
-                    )
-
-                    User.findByIdAndUpdate(decoded._id, user, {}, (err) => {
-                        if (err) return next(err);
-                        res.status(201).json({status: 201, message: "The user was updated succesfully"});
-                    })
-                }
-
-
-
-
-
-
+                    }
+                })
             })
         }
     }
@@ -342,7 +346,7 @@ exports.put_user_password = [
                         })
                     } else {
                         // Old Password doesn't match.
-                        const error = new Error("Incorrect creditentials");
+                        const error = new Error("Incorrect password");
                         error.status = 401;
                         return next(error);
                     }
