@@ -9,9 +9,10 @@ const UserSchema = new Schema(
         dob: {type: Date, required: true},
         password: {type: String, required: true},
         avatar: {
-            contentType: {type: String, default: "image/png"},
+            is_default: {type: Boolean, default: true},
+            public_id: {type: String, default: undefined},
             originalName: {type: String, default: "default.png"},
-            path: {type: String, default: "images/users/default.png"}
+            url: {type: String, default: `https://res.cloudinary.com/dqcnxy51g/image/upload/v1664991126/${process.env.NODE_ENV === "production"?"blog-api":"dev-blog-api"}/defaults/default-avatar-1.webp`}
         },
         creation_date: {type: Date, required: true, default: Date.now}
     }

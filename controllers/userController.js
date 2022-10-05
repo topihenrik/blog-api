@@ -5,9 +5,10 @@ const { body, validationResult } = require('express-validator')
 const async = require("async")
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
-require("dotenv").config();
 const {nanoid} = require("nanoid");
 const fs = require("fs");
+const streamifier = require("streamifier");
+const cloudinary = require("../utils/cloudinary");
 
 // setup multer and sharp
 const multer = require("multer");
@@ -61,33 +62,46 @@ exports.post_user = [
                 }
 
                 if (req.file) { // New photo
-                    const fileName = "images/users/" + nanoid() + ".webp";
-                    sharp(req.file.buffer).resize(256).webp({lossless: true}).toFile("public/"+fileName, (err) => {
+                    /* const fileName = "images/users/" + nanoid() + ".webp"; */
+                    sharp(req.file.buffer).resize(256).webp({lossless: true}).toBuffer((err, data, info) => {
                         if (err) return next(err);
+                        
+                        // Uploading the user avatar image file to Cloudinary.
+                        const uploadStream = cloudinary.uploader.upload_stream(
+                            {
+                                folder: (process.env.NODE_ENV === 'production'?"blog-api":"dev-blog-api")
+                            },
+                            (error, result) => {
+                                if (error) return next(error);      
+                                
+                                bcrypt.hash(req.body.password, 10, (err, hashedPassword) => {
+                                    if (err) return next(err);
 
-                        bcrypt.hash(req.body.password, 10, (err, hashedPassword) => {
-                            if (err) return next(err);
-
-                            const user = new User(
-                                {
-                                    first_name: req.body.first_name,
-                                    last_name: req.body.last_name,
-                                    email: req.body.email,
-                                    dob: new Date(req.body.dob),
-                                    password: hashedPassword,
-                                    avatar: {
-                                        contentType: "image/webp",
-                                        originalName: req.file.originalname,
-                                        path: fileName
-                                    }
-                                }
-                            )
-                
-                            user.save((err) => {
-                                if (err) return next(err);
-                                res.status(201).json({message: "The user was created successfully", status: 201});
-                            })
-                        })
+                                    const user = new User(
+                                        {
+                                            first_name: req.body.first_name,
+                                            last_name: req.body.last_name,
+                                            email: req.body.email,
+                                            dob: new Date(req.body.dob),
+                                            password: hashedPassword,
+                                            avatar: {
+                                                is_default: false,
+                                                public_id: result.public_id,
+                                                originalName: req.file.originalname,
+                                                url: result.secure_url
+                                            }
+                                        }
+                                    )
+                        
+                                    user.save((err) => {
+                                        if (err) return next(err);
+                                        res.status(201).json({message: "The user was created successfully", status: 201});
+                                    })
+                                })
+                            }
+                        )    
+                        streamifier.createReadStream(data).pipe(uploadStream);
+                        
                     })
                 } else { // No photo, use default
                     bcrypt.hash(req.body.password, 10, (err, hashedPassword) => {
@@ -101,9 +115,10 @@ exports.post_user = [
                                 dob: new Date(req.body.dob),
                                 password: hashedPassword,
                                 avatar: {
-                                    contentType: undefined,
+                                    is_default: true,
+                                    public_id: undefined,
                                     originalName: undefined,
-                                    path: undefined
+                                    url: undefined
                                 }
                             }
                         )
@@ -236,41 +251,55 @@ exports.put_user_basic = [
                     }
 
                     if (req.file) { // New avatar
-                        const fileName = "images/users/" + nanoid() + ".webp";
-                        sharp(req.file.buffer).resize(256).webp({lossless: true}).toFile("public/"+fileName, (err) => {
+                        /* const fileName = "images/users/" + nanoid() + ".webp"; */
+                        sharp(req.file.buffer).resize(256).webp({lossless: true}).toBuffer((err, data, info) => {
                             if (err) return next(err);
-                            const user = new User(
+
+                            // Uploading the user avatar image file to Cloudinary.
+                            const uploadStream = cloudinary.uploader.upload_stream(
                                 {
-                                    first_name: req.body.first_name,
-                                    last_name: req.body.last_name,
-                                    email: req.body.email,
-                                    dob: new Date(req.body.dob),
-                                    avatar: {
-                                        contentType: "image/webp",
-                                        originalName: req.file.originalname,
-                                        path: fileName
-                                    },
-                                    _id: decoded._id
+                                    folder: (process.env.NODE_ENV === 'production'?"blog-api":"dev-blog-api")
+                                },
+                                (error, result) => {
+                                    if (error) return next(error);
+
+                                    const user = new User(
+                                        {
+                                            first_name: req.body.first_name,
+                                            last_name: req.body.last_name,
+                                            email: req.body.email,
+                                            dob: new Date(req.body.dob),
+                                            avatar: {
+                                                is_default: false,
+                                                public_id: result.public_id,
+                                                originalName: req.file.originalname,
+                                                url: result.secure_url
+                                            },
+                                            _id: decoded._id
+                                        }
+                                    )
+            
+                                    
+                                    User.findByIdAndUpdate(decoded._id, user, {}, (err) => {
+                                        if (err) return next(err);
+                                        
+                                        // If previous image is not a default avatar -> Delete it
+                                        if (!olduser.avatar.is_default) {
+                                            cloudinary.uploader.destroy(olduser.avatar.public_id, (error) => {
+                                                if (error) return next(error);
+                                            })
+                                        }
+            
+                                        res.status(201).json({status: 201, message: "The user was updated succesfully"});
+                                    })
+
+
+
+
                                 }
                             )
-    
-                            
-                            User.findByIdAndUpdate(decoded._id, user, {}, (err) => {
-                                if (err) return next(err);
-    
-                                // If previous image is not a default avatar -> Delete it
-                                if (!olduser.avatar.path.includes("default")) {
-                                    try {
-                                        fs.unlinkSync(process.cwd()+"/public/"+olduser.avatar.path);
-                                    } catch (err) {
-                                        if (err) return next(err);
-                                    }
-                                }
-    
-                                res.status(201).json({status: 201, message: "The user was updated succesfully"});
-                            })
-    
-    
+                            streamifier.createReadStream(data).pipe(uploadStream);
+
                         })
                     } else { // No new avatar
                         const user = new User(
@@ -280,9 +309,10 @@ exports.put_user_basic = [
                                 email: req.body.email,
                                 dob: new Date(req.body.dob),
                                 avatar: {
-                                    contentType: olduser.avatar.contentType,
+                                    is_default: olduser.avatar.is_default,
+                                    public_id: olduser.avatar.public_id,
                                     originalName: olduser.avatar.originalName,
-                                    path: olduser.avatar.path
+                                    url: olduser.avatar.url
                                 },
                                 _id: decoded._id
                             }
@@ -386,12 +416,10 @@ exports.delete_user_all = (req, res, next) => {
                         // Delete Post db data and server photo file
                         Post.findByIdAndDelete(post._id, (err) => {
                             if (err) return next(err);
-                            if (!post.photo.path.includes("default-")) {
-                                try {
-                                    fs.unlinkSync(process.cwd()+"/public/"+post.photo.path);
-                                } catch(err) {
-                                    if (err) return next(err);
-                                }
+                            if (!post.photo.is_default) {
+                                cloudinary.uploader.destroy(post.photo.public_id, (error) => {
+                                    if (error) return next(error);
+                                })
                             }
                         })
                     })
@@ -407,12 +435,10 @@ exports.delete_user_all = (req, res, next) => {
                         // Delete User db data and server avatar file
                         User.findByIdAndDelete(decoded._id, (err) => {
                             if (err) return next(err);
-                            if (!theuser.avatar.path.includes("default")) {
-                                try {
-                                    fs.unlinkSync(process.cwd()+"/public/"+theuser.avatar.path);
-                                } catch(err) {
-                                    if (err) return next(err);
-                                }
+                            if (!theuser.avatar.is_default) {
+                                cloudinary.uploader.destroy(theuser.avatar.public_id, (error) => {
+                                    if (error) return next(error);
+                                })
                             }
                             res.status(200).json({status: 200, message: "The user information was deleted successfully"});
                         })

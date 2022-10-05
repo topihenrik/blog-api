@@ -12,9 +12,12 @@ const PostSchema = new Schema(
         timestamp: {type: Date, required: true, default: Date.now},
         edit_timestamp: {type: Date, default: undefined},
         photo: {
-            contentType: {type: String, default: "image/webp"},
-            originalName: {type: String},
-            path: {type: String, default: () => {return "images/posts/default-"+Math.ceil(Math.random() * 3).toString()+".webp";}}
+            is_default: {type: Boolean, default: true},
+            public_id: {type: String, default: undefined},
+            originalName: {type: String, default: "default.webp"},
+            url: {type: String, default: () => {
+                return `https://res.cloudinary.com/dqcnxy51g/image/upload/v1664991126/${process.env.NODE_ENV === "production"?"blog-api":"dev-blog-api"}/defaults/default-photo-${+Math.ceil(Math.random() * 3).toString()}.webp`;
+            }}
         },
         published: {type: Boolean, default: false}
     }

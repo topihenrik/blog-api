@@ -5,6 +5,8 @@ const fs = require("fs");
 const { body,validationResult } = require('express-validator');
 const {nanoid} = require("nanoid");
 const async = require("async");
+const streamifier = require("streamifier");
+const cloudinary = require("../utils/cloudinary");
 
 // setup multer and sharp
 const multer = require("multer");
@@ -12,7 +14,6 @@ const sharp = require("sharp");
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-    console.log(file);
     if ((file.mimetype === "image/png") || (file.mimetype === "image/jpeg")) {
         cb(null, true);
     } else {
@@ -54,30 +55,42 @@ exports.post_post = [
             const cleanContent = DOMPurify.sanitize(req.body.content);
 
             if(req.file) { // Photo uploaded
-                const fileName = "images/posts/" + nanoid() + ".webp";
-                sharp(req.file.buffer).resize({width:1920}).webp().toFile("public/"+fileName, (err) => {
+                /* const fileName = "images/posts/" + nanoid() + ".webp"; */
+                sharp(req.file.buffer).resize({width:1920}).webp().toBuffer((err, data, info) => {
                     if (err) return next(err);
-        
-                    const post = new Post(
+
+                    // Uploading the post photo file to Cloudinary.
+                    const uploadStream = cloudinary.uploader.upload_stream(
                         {
-                            title: req.body.title,
-                            content: cleanContent,
-                            description: req.body.description,
-                            author: decoded._id,
-                            timestamp: Date.now(),
-                            photo: {
-                                contentType: "image/webp",
-                                originalName: req.file.originalname,
-                                path: fileName
-                            },
-                            published: req.body.published
+                            folder: (process.env.NODE_ENV === 'production'?"blog-api":"dev-blog-api")
+                        },
+                        (error, result) => {
+                            if (error) return next(error);
+
+                            const post = new Post(
+                                {
+                                    title: req.body.title,
+                                    content: cleanContent,
+                                    description: req.body.description,
+                                    author: decoded._id,
+                                    timestamp: Date.now(),
+                                    photo: {
+                                        is_default: false,
+                                        public_id: result.public_id,
+                                        originalName: req.file.originalname,
+                                        url: result.secure_url
+                                    },
+                                    published: req.body.published
+                                }
+                            )
+                
+                            post.save((err) => {
+                                if (err) return next(err);
+                                res.status(201).json({status: 201 ,message: "The post was created successfully"})
+                            })
                         }
                     )
-        
-                    post.save((err) => {
-                        if (err) return next(err);
-                        res.status(201).json({status: 201 ,message: "The post was created successfully"})
-                    })
+                    streamifier.createReadStream(data).pipe(uploadStream);
                 })
             } else { // No photo uploaded -> Using a default picture by setting photo properties undefined.
                 const post = new Post(
@@ -88,9 +101,10 @@ exports.post_post = [
                         author: decoded._id,
                         timestamp: Date.now(),
                         photo: {
-                            contentType: undefined,
+                            is_default: true,
+                            public_id: undefined,
                             originalName: "default.webp",
-                            path: undefined
+                            url: undefined
                         },
                         published: req.body.published
                     }
@@ -217,7 +231,6 @@ exports.get_posts_author = (req, res, next) => {
         }
 
         // Check if the requestee is the author.
-        console.log("decoded._id:", decoded._id);
         if (post_list[0]?.author._id.toString() !== decoded._id) {
             const error = new Error("No authorization");
             error.status = 401;
@@ -288,42 +301,52 @@ exports.put_post = [
 
                 // Optimize if the user submits a new photo. Otherwise use the old one.
                 if(req.file) { // New photo uploaded
-                    const fileName = "images/posts/" + nanoid() + ".webp";
-                    sharp(req.file.buffer).resize({width:1920}).webp().toFile("public/"+fileName, (err) => {
-                        if (err) return next(err);             
-
-                        const post = new Post(
+                    /* const fileName = "images/posts/" + nanoid() + ".webp"; */
+                    sharp(req.file.buffer).resize({width:1920}).webp().toBuffer((err, data, info) => {
+                        if (err) return next(err);  
+                        
+                        // Uploading the post photo file to Cloudinary.
+                        const uploadStream = cloudinary.uploader.upload_stream(
                             {
-                                title: req.body.title,
-                                content: cleanContent,
-                                description: req.body.description,
-                                author: decoded._id,
-                                timestamp: oldpost.timestamp,
-                                edit_timestamp: Date.now(),
-                                photo: {
-                                    contentType: "image/webp",
-                                    originalName: req.file.originalname,
-                                    path: fileName
-                                },
-                                published: req.body.published,
-                                _id: req.body.postID
+                                folder: (process.env.NODE_ENV === 'production'?"blog-api":"dev-blog-api")
+                            },
+                            (error, result) => {
+                                if (error) return next(error);
+
+                                const post = new Post(
+                                    {
+                                        title: req.body.title,
+                                        content: cleanContent,
+                                        description: req.body.description,
+                                        author: decoded._id,
+                                        timestamp: oldpost.timestamp,
+                                        edit_timestamp: Date.now(),
+                                        photo: {
+                                            is_default: false,
+                                            public_id: result.public_id,
+                                            originalName: req.file.originalname,
+                                            url: result.secure_url
+                                        },
+                                        published: req.body.published,
+                                        _id: req.body.postID
+                                    }
+                                )
+        
+                                Post.findByIdAndUpdate(req.body.postID, post, {}, (err) => {
+                                    if (err) return next(err);
+        
+                                    // If previous image is not a default image -> Delete it.
+                                    if (!oldpost.photo.is_default) {
+                                        cloudinary.uploader.destroy(oldpost.photo.public_id, (error) => {
+                                            if (error) return next(error);
+                                        })
+                                    }
+        
+                                    res.status(201).json({status: 201, message: "The post was updated succesfully"});
+                                })
                             }
                         )
-
-                        Post.findByIdAndUpdate(req.body.postID, post, {}, (err) => {
-                            if (err) return next(err);
-
-                            // If previous image is not a default image -> Delete it.
-                            if (!oldpost.photo.path.includes("default-")) {
-                                try {
-                                    fs.unlinkSync(process.cwd()+"/public/"+oldpost.photo.path)
-                                } catch(err) {
-                                    if (err) return next(err);
-                                }
-                            }
-
-                            res.status(201).json({status: 201, message: "The post was updated succesfully"});
-                        })
+                        streamifier.createReadStream(data).pipe(uploadStream);
                     })
                 } else { // No new photo;
                     const post = new Post(
@@ -335,9 +358,10 @@ exports.put_post = [
                             timestamp: oldpost.timestamp,
                             edit_timestamp: Date.now(),
                             photo: {
-                                contentType: oldpost.photo.contentType,
+                                is_default: oldpost.photo.is_default,
+                                public_id: oldpost.photo.public_id,
                                 originalName: oldpost.photo.originalName,
-                                path: oldpost.photo.path
+                                url: oldpost.photo.url
                             },
                             published: req.body.published,
                             _id: req.body.postID
@@ -350,7 +374,6 @@ exports.put_post = [
                     })
 
                 }
-
             })
         }
     }
@@ -377,8 +400,6 @@ exports.delete_post = (req, res, next) => {
         }
 
         if (req.body.confirmation !== results.post.title) {
-            console.log(req.body.confirmation)
-            console.log(results.post.title);
             const error = new Error("Confirmation title didn't match.")
             error.status = 400;
             return next(error);
@@ -391,12 +412,10 @@ exports.delete_post = (req, res, next) => {
                 if(err) return next(err);
 
                 // If the posts image is not a default image -> Delete it.
-                if (!results.post.photo.path.includes("default-")) {
-                    try {
-                        fs.unlinkSync(process.cwd()+"/public/"+results.post.photo.path);
-                    } catch(err) {
-                        if (err) return next(err);
-                    }
+                if (!results.post.is_default) {
+                    cloudinary.uploader.destroy(results.post.photo.public_id, (error) => {
+                        if (error) return next(error);
+                    });
                 }
 
                 res.status(200).json({status: 200, message: "The post and its comments were deleted successfully"})

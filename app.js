@@ -1,3 +1,4 @@
+require("dotenv").config();
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
@@ -6,7 +7,6 @@ var logger = require('morgan');
 var mongoose = require("mongoose");
 var cors = require("cors")
 var multer = require("multer");
-require("dotenv").config();
 var blogRouter = require("./routes/blog");
 var authRouter = require("./routes/auth");
 
@@ -20,10 +20,10 @@ var jwtStrategy = require("./strategies/jwt")
 passport.use(jwtStrategy)
 
 
-app.use(cors({origin: ["https://blog-front-pi.vercel.app", "https://blog-edit.vercel.app/"]}));
+app.use(cors({origin: (process.env.NODE_ENV === "production"?["https://blog-front-pi.vercel.app", "https://blog-edit.vercel.app/"]:"*")}));
 
 // database setup
-const mongoDB = (process.env.NODE_ENV === 'production'?process.env.DB_URL:process.env.DEV_DB_URL);
+const mongoDB = (process.env.NODE_ENV === 'production'?process.env.DB_URL:process.env.DB_DEV_URL);
 mongoose.connect(mongoDB, {useNewUrlParser: true, useUnifiedTopology: true});
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "MongoDB connection error:"));
