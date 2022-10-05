@@ -20,9 +20,8 @@ var jwtStrategy = require("./strategies/jwt")
 passport.use(jwtStrategy)
 
 
-app.use(cors());
+app.use(cors({origin: ["https://blog-front-pi.vercel.app", "https://blog-edit.vercel.app/"]}));
 
-console.log(process.env.NODE_ENV)
 // database setup
 const mongoDB = (process.env.NODE_ENV === 'production'?process.env.DB_URL:process.env.DEV_DB_URL);
 mongoose.connect(mongoDB, {useNewUrlParser: true, useUnifiedTopology: true});

@@ -6,8 +6,8 @@
   },
   "private": true,
   "scripts": {
-    "start": "SET DEBUG=blog-api:* & npm run dev-start",
-    "dev-start": "nodemon ./bin/www"
+    "start": "SET DEBUG=blog-api:* & nodemon ./bin/www",
+    "prod-start": "node ./bin/www"
   },
   "dependencies": {
     "async": "^3.2.4",
