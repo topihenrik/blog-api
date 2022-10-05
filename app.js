@@ -1,25 +1,28 @@
 require("dotenv").config();
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-var mongoose = require("mongoose");
-var cors = require("cors")
-var multer = require("multer");
-var blogRouter = require("./routes/blog");
-var authRouter = require("./routes/auth");
+const createError = require('http-errors');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
+const mongoose = require("mongoose");
+const multer = require("multer");
+const blogRouter = require("./routes/blog");
+const authRouter = require("./routes/auth");
 
-var app = express();
+const app = express();
 
 
 // jwt and passport setup
-var passport = require("passport")
-var jwtStrategy = require("./strategies/jwt")
+const passport = require("passport")
+const jwtStrategy = require("./strategies/jwt")
 passport.use(jwtStrategy)
 
-
-app.use(cors({origin: (process.env.NODE_ENV === "production"?["https://blog-front-pi.vercel.app", "https://blog-edit.vercel.app/"]:"*")}));
+// cors setup
+const cors = require("cors")
+const corsOptions = {
+  origin: (process.env.NODE_ENV === "production"?["https://blog-front-pi.vercel.app", "https://blog-edit.vercel.app"]:"*")
+}
+app.use(cors(corsOptions));
 
 // database setup
 const mongoDB = (process.env.NODE_ENV === 'production'?process.env.DB_URL:process.env.DB_DEV_URL);
