@@ -1,9 +1,7 @@
 const Post = require("../models/post");
 const Comment = require("../models/comment")
 const jwt = require("jsonwebtoken");
-const fs = require("fs");
 const { body,validationResult } = require('express-validator');
-const {nanoid} = require("nanoid");
 const async = require("async");
 const streamifier = require("streamifier");
 const cloudinary = require("../utils/cloudinary");
@@ -55,7 +53,6 @@ exports.post_post = [
             const cleanContent = DOMPurify.sanitize(req.body.content);
 
             if(req.file) { // Photo uploaded
-                /* const fileName = "images/posts/" + nanoid() + ".webp"; */
                 sharp(req.file.buffer).resize({width:1920}).webp().toBuffer((err, data, info) => {
                     if (err) return next(err);
 
@@ -301,7 +298,6 @@ exports.put_post = [
 
                 // Optimize if the user submits a new photo. Otherwise use the old one.
                 if(req.file) { // New photo uploaded
-                    /* const fileName = "images/posts/" + nanoid() + ".webp"; */
                     sharp(req.file.buffer).resize({width:1920}).webp().toBuffer((err, data, info) => {
                         if (err) return next(err);  
                         

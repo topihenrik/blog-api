@@ -14,7 +14,6 @@ var app = express();
 
 
 // jwt and passport setup
-var jwt = require("jsonwebtoken")
 var passport = require("passport")
 var jwtStrategy = require("./strategies/jwt")
 passport.use(jwtStrategy)

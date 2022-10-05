@@ -5,15 +5,12 @@ const { body, validationResult } = require('express-validator')
 const async = require("async")
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
-const {nanoid} = require("nanoid");
-const fs = require("fs");
 const streamifier = require("streamifier");
 const cloudinary = require("../utils/cloudinary");
 
 // setup multer and sharp
 const multer = require("multer");
 const sharp = require("sharp")
-const e = require("express")
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
@@ -62,7 +59,6 @@ exports.post_user = [
                 }
 
                 if (req.file) { // New photo
-                    /* const fileName = "images/users/" + nanoid() + ".webp"; */
                     sharp(req.file.buffer).resize(256).webp({lossless: true}).toBuffer((err, data, info) => {
                         if (err) return next(err);
                         
@@ -251,7 +247,6 @@ exports.put_user_basic = [
                     }
 
                     if (req.file) { // New avatar
-                        /* const fileName = "images/users/" + nanoid() + ".webp"; */
                         sharp(req.file.buffer).resize(256).webp({lossless: true}).toBuffer((err, data, info) => {
                             if (err) return next(err);
 
