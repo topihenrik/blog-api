@@ -5,6 +5,7 @@ const { body,validationResult } = require('express-validator');
 const async = require("async");
 const streamifier = require("streamifier");
 const cloudinary = require("../utils/cloudinary");
+const DOMPurify = require("../utils/dompurify");
 
 // setup multer and sharp
 const multer = require("multer");
@@ -30,12 +31,13 @@ const upload = multer({storage: storage, limits: limits, fileFilter: fileFilter}
 
 
 
-// setup dompurify
+/* // setup dompurify
 const createDOMPurify = require("dompurify");
 const { JSDOM } = require("jsdom");
 
 const window = new JSDOM("").window;
-const DOMPurify = createDOMPurify(window);
+const DOMPurify = createDOMPurify(window); */
+
 
 
 exports.post_post = [

@@ -3,18 +3,16 @@ const Post = require("../models/post");
 const { body,validationResult } = require('express-validator')
 const jwt = require("jsonwebtoken");
 const async = require("async");
-
+const DOMPurify = require("../utils/dompurify");
 
 exports.post_comment = [
-    body("content", "Content must be specified").trim().isLength({min:1}).escape(),
-
+    body("content", "Content must be specified").trim().isLength({min:1}),
     (req, res, next) => {
         const errors = validationResult(req);
-
         if (!errors.isEmpty()) {
             res.status(400).json({errors: errors.array()});
         } else {
-
+            const cleanContent = DOMPurify.sanitize(req.body.content);
             Post.findById(req.params.postid).exec((err, thepost) => {
                 if (err) return next(err);
 
@@ -29,7 +27,7 @@ exports.post_comment = [
                 const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
                 const comment = new Comment(
                     {
-                        content: req.body.content,
+                        content: cleanContent,
                         author: decoded._id,
                         post: req.params.postid,
                         timestamp: Date.now()
@@ -77,15 +75,15 @@ exports.get_comment = (req, res, next) => {
 
 
 exports.put_comment = [
-    body("content", "Content must be specified").trim().isLength({min:1}).escape(),
-
+    body("content", "Content must be specified").trim().isLength({min:1}),
     (req, res, next) => {
-        const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
         const errors = validationResult(req);
-
         if (!errors.isEmpty()) {
             res.status(400).json({errors: errors.array()});
         } else {
+            const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+            const cleanContent = DOMPurify.sanitize(req.body.content);
+
             Comment.findById(req.params.commentid).exec((err, oldcomment) => {
                 if (err) return next(err);
 
@@ -103,7 +101,7 @@ exports.put_comment = [
 
                 const comment = new Comment(
                     {
-                        content: req.body.content,
+                        content: cleanContent,
                         author: decoded._id,
                         post: req.params.postid,
                         timestamp: oldcomment.timestamp,

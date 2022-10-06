@@ -9,7 +9,7 @@ const user_controller = require("../controllers/userController");
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-    res.json({message: "Blog API index response"});
+    res.status(200).json({status: 200, message: "Blog API is operational"});
 });
 
 
