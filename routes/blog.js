@@ -7,9 +7,9 @@ const user_controller = require("../controllers/userController");
 
 
 
-/* GET home page. */
-router.get('/', function(req, res, next) {
-    res.status(200).json({status: 200, message: "Blog API is operational"});
+/* HEAD status response */
+router.head('/', function(req, res, next) {
+    res.status(200).send();
 });
 
 
