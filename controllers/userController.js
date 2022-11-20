@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 const streamifier = require("streamifier");
 const cloudinary = require("../utils/cloudinary");
+const { DateTime } = require("luxon");
 
 // setup multer and sharp
 const multer = require("multer");
@@ -50,6 +51,12 @@ exports.post_user = [
         if (!errors.isEmpty()) {
             res.status(400).json({errors: errors.array()});
         } else {
+            if(DateTime.fromISO(req.body.dob).diffNow("years").years>-18) {
+                const error = new Error("you must be over 18 years old");
+                error.status = 400;
+                return next(error);
+            }
+
             User.findOne({email: req.body.email}, (err, user) => {
                 if (err) return next(err);
                 if (user !== null) {
@@ -228,6 +235,12 @@ exports.put_user_basic = [
             res.status(400).json({errors: errors.array()});
         } else {
             const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+
+            if(DateTime.fromISO(req.body.dob).diffNow("years").years>-18) {
+                const error = new Error("you must be over 18 years old");
+                error.status = 400;
+                return next(error);
+            }
 
             User.findById(decoded._id).exec((err, olduser) => {
                 if (err) return next(err);
