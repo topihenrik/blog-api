@@ -29,30 +29,23 @@ const limits = {
 
 const upload = multer({storage: storage, limits: limits, fileFilter: fileFilter});
 
-
-
-/* // setup dompurify
-const createDOMPurify = require("dompurify");
-const { JSDOM } = require("jsdom");
-
-const window = new JSDOM("").window;
-const DOMPurify = createDOMPurify(window); */
-
-
-
+// POST create single post
 exports.post_post = [
     upload.single("photo"),
-    body("title", "Define title using a Heading 1 element. Minimum length is 5 characters.").trim().isLength({min:5}).escape(),
+    body("title", "Define title using a Heading 1 element. Minimum length is 5 characters.").trim().isLength({min:5}),
     body("content", "Content must be defined. Minimum length is 10 characters.").isLength({min:10}),
-    body("description", "Define description using a paragraph element. Minimum length is 5 characters.").trim().isLength({min:5}).escape(),
+    body("description", "Define description using a paragraph element. Minimum length is 5 characters.").trim().isLength({min:5}),
     body("published", "Published value must be a boolean.").isBoolean().escape(),
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            res.status(400).json({errors: errors.array()})
+            res.status(400).json({errors: errors.array()});
         } else {
             const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+
+            const cleanTitle = DOMPurify.sanitize(req.body.title);
             const cleanContent = DOMPurify.sanitize(req.body.content);
+            const cleanDescription = DOMPurify.sanitize(req.body.description);
 
             if(req.file) { // Photo uploaded
                 sharp(req.file.buffer).resize({width:1920}).webp().toBuffer((err, data, info) => {
@@ -68,9 +61,9 @@ exports.post_post = [
 
                             const post = new Post(
                                 {
-                                    title: req.body.title,
+                                    title: cleanTitle,
                                     content: cleanContent,
-                                    description: req.body.description,
+                                    description: cleanDescription,
                                     author: decoded._id,
                                     timestamp: Date.now(),
                                     photo: {
@@ -94,9 +87,9 @@ exports.post_post = [
             } else { // No photo uploaded -> Using a default picture by setting photo properties undefined.
                 const post = new Post(
                     {
-                        title: req.body.title,
+                        title: cleanTitle,
                         content: cleanContent,
-                        description: req.body.description,
+                        description: cleanDescription,
                         author: decoded._id,
                         timestamp: Date.now(),
                         photo: {
@@ -266,9 +259,9 @@ exports.get_posts_author = (req, res, next) => {
 // PUT update single post
 exports.put_post = [
     upload.single("photo"),
-    body("title", "Define title using a Heading 1 element. Minimum length is 5 characters.").trim().isLength({min:5}).escape(),
+    body("title", "Define title using a Heading 1 element. Minimum length is 5 characters.").trim().isLength({min:5}),
     body("content", "Content must be defined. Minimum length is 10 characters.").isLength({min:10}),
-    body("description", "Define description using a paragraph element. Minimum length is 5 characters.").trim().isLength({min:5}).escape(),
+    body("description", "Define description using a paragraph element. Minimum length is 5 characters.").trim().isLength({min:5}),
     body("postID", "Post ID must be specified").trim().isLength({min:1}).escape(),
     body("published", "Published value must be a boolean.").isBoolean().escape(),
     (req, res, next) => {
@@ -277,7 +270,10 @@ exports.put_post = [
             res.status(400).json({errors: errors.array()});
         } else {
             const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+
+            const cleanTitle = DOMPurify.sanitize(req.body.title);
             const cleanContent = DOMPurify.sanitize(req.body.content);
+            const cleanDescription = DOMPurify.sanitize(req.body.description);
 
             // Check if the user is authorized to make the change. (POST CREATOR == POST UPDATER)
             Post.findById(req.body.postID).exec((err, oldpost) => {
@@ -313,9 +309,9 @@ exports.put_post = [
 
                                 const post = new Post(
                                     {
-                                        title: req.body.title,
+                                        title: cleanTitle,
                                         content: cleanContent,
-                                        description: req.body.description,
+                                        description: cleanDescription,
                                         author: decoded._id,
                                         timestamp: oldpost.timestamp,
                                         edit_timestamp: Date.now(),
@@ -349,9 +345,9 @@ exports.put_post = [
                 } else { // No new photo;
                     const post = new Post(
                         {
-                            title: req.body.title,
+                            title: cleanTitle,
                             content: cleanContent,
-                            description: req.body.description,
+                            description: cleanDescription,
                             author: decoded._id,
                             timestamp: oldpost.timestamp,
                             edit_timestamp: Date.now(),
