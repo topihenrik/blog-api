@@ -13,12 +13,12 @@ const app = express();
 
 
 // jwt and passport setup
-const passport = require("passport")
-const jwtStrategy = require("./strategies/jwt")
-passport.use(jwtStrategy)
+const passport = require("passport");
+const jwtStrategy = require("./strategies/jwt");
+passport.use(jwtStrategy);
 
 // cors setup
-const cors = require("cors")
+const cors = require("cors");
 const corsOptions = {
   origin: (process.env.NODE_ENV === "production"?["https://blog-front-pi.vercel.app", "https://blog-edit.vercel.app"]:"*")
 }
