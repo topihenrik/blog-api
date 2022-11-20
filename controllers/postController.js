@@ -114,7 +114,7 @@ exports.post_post = [
 
 // GET all posts. Includes a comment count. Value "published" needs to be true.
 exports.get_posts = (req, res, next) => {
-    Post.find({published: true}, {content: 0}).populate("author", "first_name last_name avatar").lean().exec((err, post_list) => {
+    Post.find({published: true}, {content: 0}).populate("author", "first_name last_name avatar").sort("-timestamp").lean().exec((err, post_list) => {
         if (err) return next(err);
         if (post_list == null) {
             const error = new Error("No post found");
@@ -122,8 +122,7 @@ exports.get_posts = (req, res, next) => {
             return next(error);
         }
 
-        let post_list_with_count = [];
-        const promises = post_list.map((post) => {
+        const promises = post_list.map((post, i) => {
             return new Promise((resolve, reject) => {
                 let post_new = {};
                 Comment.countDocuments({post: post._id.toString()}, (err, count) => {
@@ -132,7 +131,7 @@ exports.get_posts = (req, res, next) => {
                         ...post,
                         count: count
                     }
-                    post_list_with_count.push(post_new)
+                    post_list[i] = post_new;
                     resolve();
                 })
             }) 
@@ -140,7 +139,7 @@ exports.get_posts = (req, res, next) => {
 
         Promise.all(promises)
             .then(() => {
-                res.status(200).json({post_list: post_list_with_count})
+                res.status(200).json({post_list: post_list});
             })
             .catch((err) => {
                 return next(err)
@@ -214,7 +213,7 @@ exports.get_post_commentcount = (req, res, next) => {
 exports.get_posts_author = (req, res, next) => {
     const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
 
-    Post.find({author: decoded._id}).populate("author", "first_name last_name avatar").lean().exec((err, post_list) => {
+    Post.find({author: decoded._id}).populate("author", "first_name last_name avatar").sort("-timestamp").lean().exec((err, post_list) => {
         if (err) return next(err);
         if (post_list === null) {
             const error = new Error("No post found");
@@ -229,8 +228,7 @@ exports.get_posts_author = (req, res, next) => {
             return next(error);
         }
 
-        let post_list_with_count = [];
-        const promises = post_list.map((post) => {
+        const promises = post_list.map((post, i) => {
             return new Promise((resolve, reject) => {
                 let post_new = {};
                 Comment.countDocuments({post: post._id.toString()}, (err, count) => {
@@ -239,7 +237,7 @@ exports.get_posts_author = (req, res, next) => {
                         ...post,
                         count: count
                     }
-                    post_list_with_count.push(post_new);
+                    post_list[i] = post_new;
                     resolve();
                 })
             })
@@ -247,7 +245,7 @@ exports.get_posts_author = (req, res, next) => {
 
         Promise.all(promises)
             .then(() => {
-                res.status(200).json({post_list: post_list_with_count})
+                res.status(200).json({post_list: post_list});
             })
             .catch((err) => {
                 return next(err);
