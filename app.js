@@ -11,7 +11,6 @@ const authRouter = require("./routes/auth");
 
 const app = express();
 
-
 // jwt and passport setup
 const passport = require("passport");
 const jwtStrategy = require("./strategies/jwt");
@@ -20,12 +19,12 @@ passport.use(jwtStrategy);
 // cors setup
 const cors = require("cors");
 const corsOptions = {
-  origin: (process.env.NODE_ENV === "production"?["https://blog-front-pi.vercel.app", "https://blog-edit.vercel.app"]:"*")
+  origin: process.env.NODE_ENV === "production" ? "https://blog-front-pi.vercel.app" : "*"
 }
 app.use(cors(corsOptions));
 
 // database setup
-const mongoDB = (process.env.NODE_ENV === 'production'?process.env.DB_URL:process.env.DB_DEV_URL);
+const mongoDB = process.env.NODE_ENV === 'production' ? process.env.DB_URL : process.env.DB_DEV_URL;
 mongoose.connect(mongoDB, {useNewUrlParser: true, useUnifiedTopology: true});
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "MongoDB connection error:"));
@@ -34,11 +33,10 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
 // routes
-app.use("/", blogRouter);
-app.use("/auth", passport.authenticate("jwt", {session: false}), authRouter);
+app.use("/api", blogRouter);
+app.use("/api/auth", passport.authenticate("jwt", {session: false}), authRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

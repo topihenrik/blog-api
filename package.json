@@ -6,8 +6,9 @@
   },
   "private": true,
   "scripts": {
-    "start": "SET DEBUG=blog-api:* & nodemon ./bin/www",
-    "prod-start": "node ./bin/www"
+    "start": "node ./bin/www",
+    "dev": "SET DEBUG=blog-api:* & nodemon ./bin/www",
+    "lint": "eslint ."
   },
   "dependencies": {
     "async": "^3.2.4",
@@ -34,6 +35,7 @@
     "streamifier": "^0.1.1"
   },
   "devDependencies": {
+    "eslint": "^8.29.0",
     "nodemon": "^2.0.19"
   }
 }

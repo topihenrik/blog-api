@@ -2,7 +2,7 @@
 This is the repository for the backend of the blog project. 
 
 ## Live preview
-Backend can be seen in action by using the frontend clients (links below) or by starting the server by yourself.
+Backend can be seen in action by using the frontend client (link below) or by starting the server by yourself.
 
 ## What does it do?
 Backend responds to clients REST requests with corresponding information or with an error if it can't be completed for some reason. Backend has CRUD operations that can be used to manipulate User, Post and Comment data, but only if the user has the necessary authorization.
@@ -25,6 +25,5 @@ Run development server
 npm start
 ```
 
-## Other Project Related Repositories
+## Other Project Related Repository
 * Blog Front: https://github.com/topihenrik/blog-front
-* Blog Edit: https://github.com/topihenrik/blog-edit
