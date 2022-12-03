@@ -29,6 +29,10 @@
         ],
         "eqeqeq": "error",
         "no-trailing-spaces": "error",
-        "no-var": "error"
+        "no-var": "error",
+        "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+        "eol-last": "error",
+        "object-curly-spacing": ["error", "always"],
+        "key-spacing": ["error", {"beforeColon": false, "afterColon": true}]
     }
 }
