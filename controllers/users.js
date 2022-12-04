@@ -1,3 +1,4 @@
+const config = require("../utils/config");
 const User = require("../models/user");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
@@ -71,7 +72,7 @@ exports.post_user = [
                         // Uploading the user avatar image file to Cloudinary.
                         const uploadStream = cloudinary.uploader.upload_stream(
                             {
-                                folder: process.env.NODE_ENV === "production" ? "blog-api" : "dev-blog-api"
+                                folder: config.CLOUD_FOLDER
                             },
                             (error, result) => {
                                 if (error) return next(error);
@@ -266,7 +267,7 @@ exports.put_user_basic = [
                             // Uploading the user avatar image file to Cloudinary.
                             const uploadStream = cloudinary.uploader.upload_stream(
                                 {
-                                    folder: process.env.NODE_ENV === "production" ? "blog-api" : "dev-blog-api"
+                                    folder: config.CLOUD_FOLDER
                                 },
                                 (error, result) => {
                                     if (error) return next(error);

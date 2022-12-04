@@ -1,3 +1,4 @@
+const config = require("../utils/config");
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
@@ -14,7 +15,7 @@ const UserSchema = new Schema(
             originalName: { type: String, default: "default.png" },
             url: {
                 type: String,
-                default: `https://res.cloudinary.com/dqcnxy51g/image/upload/v1664991126/${process.env.NODE_ENV === "production"?"blog-api":"dev-blog-api"}/defaults/default-avatar-1.webp`
+                default: `${config.CLOUD_URL}/defaults/default-avatar-1.webp`
             }
         },
         creation_date: { type: Date, required: true, default: Date.now  }

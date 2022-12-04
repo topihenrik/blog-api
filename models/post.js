@@ -1,3 +1,4 @@
+const config = require("../utils/config");
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
@@ -16,7 +17,7 @@ const PostSchema = new Schema(
             url: {
                 type: String,
                 default: () => {
-                    return `https://res.cloudinary.com/dqcnxy51g/image/upload/v1664991126/${process.env.NODE_ENV === "production"?"blog-api":"dev-blog-api"}/defaults/default-photo-${+Math.ceil(Math.random() * 3).toString()}.webp`;
+                    return `${config.CLOUD_URL}/defaults/default-photo-${+Math.ceil(Math.random() * 3).toString()}.webp`;
                 }
             }
         },
