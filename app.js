@@ -28,7 +28,7 @@ app.use(cookieParser());
 
 // routes
 app.use("/api", blogRouter);
-app.use("/api/auth", passport.authenticate("jwt", { session: false }), authRouter);
+app.use("/api/auth", passport.authenticate("jwt", { session: false }), middleware.tokenExtract, authRouter);
 
 // catch 404 endpoint
 app.use(middleware.unknownEndpoint);

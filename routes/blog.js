@@ -33,7 +33,7 @@ router.get("/posts/:postid/comments/:commentid", comment_controller.get_comment)
 
 /* USER ROUTES */
 // POST create a new user
-router.post("/signup", user_controller.post_user);
+router.post("/signup", user_controller.post_signup);
 // POST login user
 router.post("/login", user_controller.post_login);
 

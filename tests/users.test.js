@@ -21,7 +21,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 app.use("/api", blogRouter);
-app.use("/api/auth", passport.authenticate("jwt", { session: false }), authRouter);
+app.use("/api/auth", passport.authenticate("jwt", { session: false }), middleware.tokenExtract, authRouter);
 
 app.use(middleware.unknownEndpoint);
 app.use(middleware.errorHandler);
@@ -150,7 +150,7 @@ describe("POST '/api/login' route", () => {
     });
 });
 
-describe("GET 'api/auth/user' route", () => {
+describe("GET 'api/auth/user/full' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -171,14 +171,14 @@ describe("GET 'api/auth/user' route", () => {
         const token = loginResult.body.token;
 
         await request(app)
-            .get("/api/auth/user")
+            .get("/api/auth/user/full")
             .set("Authorization", "Bearer " + token)
             .expect(200);
     });
 
     test("failure: incorrect jwt", async () => {
         await request(app)
-            .get("/api/auth/user")
+            .get("/api/auth/user/full")
             .set("Authorization", "Bearer " + "IncorrectToken")
             .expect(401);
     });

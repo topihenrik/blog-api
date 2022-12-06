@@ -1,5 +1,12 @@
 const multer = require("multer");
 const createError = require("http-errors");
+const jwt = require("jsonwebtoken");
+
+// extract jwt to req.token
+const tokenExtract = (req, res, next) => {
+    req.token = jwt.decode(req.headers.authorization.split(" ")[1]);
+    next();
+};
 
 // error handler
 const errorHandler = (err, req, res, _next) => {
@@ -8,13 +15,12 @@ const errorHandler = (err, req, res, _next) => {
         err.status = 413;
         err.message = "File too large, max size is 2MB";
     }
-    // set locals, only providing error in development
-    res.locals.message = err.message;
-    res.locals.error = req.app.get("env") === "development" ? err : {};
+
+    // only console.log 500 http errors if in development mode
+    if ((process.env.NODE_ENV === "development" || "test") && !err.status) console.error(err);
 
     // return the error response
-    res.status(err.status || 500);
-    res.json({ status: err.status, message: err.message });
+    res.status(err.status || 500).json({ status: err.status, message: err.message });
 };
 
 // catch 404 and forward to error handler
@@ -23,5 +29,5 @@ const unknownEndpoint = (req, res, next) => {
 };
 
 module.exports = {
-    errorHandler, unknownEndpoint
+    errorHandler, unknownEndpoint, tokenExtract
 };

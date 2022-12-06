@@ -3,6 +3,7 @@ const User = require("../models/user");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
 const { body, validationResult } = require("express-validator");
+const createError = require("http-errors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const streamifier = require("streamifier");
@@ -31,8 +32,23 @@ const limits = {
 
 const upload = multer({ storage: storage, limits: limits, fileFilter: fileFilter });
 
-// POST Signup User
-exports.post_user = [
+async function uploadImage(buffer) {
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            {
+                folder: config.CLOUD_FOLDER
+            },
+            (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+            }
+        );
+        streamifier.createReadStream(buffer).pipe(uploadStream);
+    });
+}
+
+// signup user
+exports.post_signup = [
     upload.single("avatar"),
     body("first_name", "first name has to be specified").trim().isLength({ min: 1 }).isAlpha("fi-FI").escape(),
     body("last_name", "last name has to be specified").trim().isLength({ min: 1 }).isAlpha("fi-FI").escape(),
@@ -46,293 +62,216 @@ exports.post_user = [
                 return value;
             }
         }),
-    (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            res.status(400).json({ errors: errors.array() });
-        } else {
-            if(DateTime.fromISO(req.body.dob).diffNow("years").years>-18) {
-                const error = new Error("you must be over 18 years old");
-                error.status = 400;
-                return next(error);
+    async (req, res, next) => {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({ errors: errors.array() });
             }
 
-            User.findOne({ email: req.body.email }, (err, user) => {
-                if (err) return next(err);
-                if (user !== null) {
-                    const error = new Error("that email is already taken");
-                    error.status = 409;
-                    return next(error);
-                }
+            if(DateTime.fromISO(req.body.dob).diffNow("years").years>-18) {
+                return next(createError(400, "you must be over 18 years old"));
+            }
 
-                if (req.file) { // New photo
-                    sharp(req.file.buffer).resize(256).webp({ lossless: true }).toBuffer((err, data, _info) => {
-                        if (err) return next(err);
+            const user = await User.findOne({ email: req.body.email });
+            if (user !== null) {
+                return next(createError(409, "that email is already taken"));
+            }
 
-                        // Uploading the user avatar image file to Cloudinary.
-                        const uploadStream = cloudinary.uploader.upload_stream(
-                            {
-                                folder: config.CLOUD_FOLDER
-                            },
-                            (error, result) => {
-                                if (error) return next(error);
+            const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
-                                bcrypt.hash(req.body.password, 10, (err, hashedPassword) => {
-                                    if (err) return next(err);
+            if (req.file) { // new avatar photo
+                const buffer = await sharp(req.file.buffer).resize(256).webp({ lossless: true }).toBuffer();
+                const avatar = await uploadImage(buffer); // uploading the user avatar image file to cloudinary.
 
-                                    const user = new User(
-                                        {
-                                            first_name: req.body.first_name,
-                                            last_name: req.body.last_name,
-                                            email: req.body.email,
-                                            dob: new Date(req.body.dob),
-                                            password: hashedPassword,
-                                            avatar: {
-                                                is_default: false,
-                                                public_id: result.public_id,
-                                                originalName: req.file.originalname,
-                                                url: result.secure_url
-                                            }
-                                        }
-                                    );
+                const newUser = new User(
+                    {
+                        first_name: req.body.first_name,
+                        last_name: req.body.last_name,
+                        email: req.body.email,
+                        dob: new Date(req.body.dob),
+                        password: hashedPassword,
+                        avatar: {
+                            is_default: false,
+                            public_id: avatar.public_id,
+                            originalName: req.file.originalname,
+                            url: avatar.secure_url
+                        }
+                    }
+                );
 
-                                    user.save((err) => {
-                                        if (err) return next(err);
-                                        res.status(201).json({ message: "The user was created successfully", status: 201 });
-                                    });
-                                });
-                            }
-                        );
-                        streamifier.createReadStream(data).pipe(uploadStream);
+                await newUser.save();
+                return res.status(201).json({ message: "The user was created successfully", status: 201 });
+            } else { // no avatar photo, use default
+                const newUser = new User(
+                    {
+                        first_name: req.body.first_name,
+                        last_name: req.body.last_name,
+                        email: req.body.email,
+                        dob: new Date(req.body.dob),
+                        password: hashedPassword,
+                        avatar: {
+                            is_default: true,
+                            public_id: undefined,
+                            originalName: undefined,
+                            url: undefined
+                        }
+                    }
+                );
 
-                    });
-                } else { // No photo, use default
-                    bcrypt.hash(req.body.password, 10, (err, hashedPassword) => {
-                        if (err) return next(err);
-
-                        const user = new User(
-                            {
-                                first_name: req.body.first_name,
-                                last_name: req.body.last_name,
-                                email: req.body.email,
-                                dob: new Date(req.body.dob),
-                                password: hashedPassword,
-                                avatar: {
-                                    is_default: true,
-                                    public_id: undefined,
-                                    originalName: undefined,
-                                    url: undefined
-                                }
-                            }
-                        );
-
-                        user.save((err) => {
-                            if (err) return next(err);
-                            res.status(201).json({ message: "The user was created successfully", status: 201 });
-                        });
-                    });
-                }
-            });
+                await newUser.save();
+                return res.status(201).json({ message: "The user was created successfully", status: 201 });
+            }
+        } catch (error) {
+            return next(error);
         }
     }
 ];
 
-// POST Login User
-exports.post_login = (req, res1, next) => {
-    User.findOne({ email: req.body.email }, (err, user) => {
-        if (err) return next(err);
+// login user
+exports.post_login = async (req, res, next) => {
+    try {
+        const user = await User.findOne({ email: req.body.email });
         if (!user) {
-            let error = new Error("Incorrect creditentials");
-            error.status = 401;
-            return next(error);
+            return next(createError(401, "Incorrect creditentials"));
         }
-        bcrypt.compare(req.body.password, user.password, (err, res) => {
-            if (err) return next(err);
-            if (res) {
-                // Passwords match -> LOGIN
 
-                const token = jwt.sign({ _id: user._id, email: user.email }, process.env.AUTH_SECRET, { expiresIn: "20h" });
-                res1.status(200).json(
-                    {
-                        message: "Authorization succesful",
-                        token: token,
-                        user: {
-                            _id: user._id,
-                            full_name: user.first_name + " " + user.last_name,
-                            avatar_url: user.avatar.url
-                        },
-                        status: 200
-                    }
-                );
-            } else {
-                // Password don't match.
-                let error = new Error("Incorrect creditentials");
-                error.status = 401;
-                return next(error);
-            }
-        });
-    });
+        const isPwdCorrect = await bcrypt.compare(req.body.password, user.password);
+        if (!isPwdCorrect) {
+            return next(createError(401, "Incorrect creditentials"));
+        }
+
+        const token = jwt.sign({ _id: user._id, email: user.email }, process.env.AUTH_SECRET, { expiresIn: "20h" });
+
+        const userDetails = {
+            message: "Authorization succesful",
+            token: token,
+            user: {
+                _id: user._id,
+                full_name: user.first_name + " " + user.last_name,
+                avatar_url: user.avatar.url
+            },
+            status: 200
+        };
+
+        return res.status(200).json(userDetails);
+    } catch (error) {
+        return next(error);
+    }
 };
 
-// GET single user data for display
-exports.get_user = (req, res, next) => {
-    const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
-    User.findById(decoded._id, "_id first_name last_name email dob avatar creation_date").exec((err, theuser) => {
-        if (err) return next(err);
-        if (theuser === null) {
-            const error = new Error("No user found");
-            error.status = 404;
-            return next(error);
+
+// get single users full details
+exports.get_user_full = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.token._id, "_id first_name last_name email dob avatar creation_date");
+        if (!user) {
+            return next(createError(404, "No user found"));
         }
 
-        if (theuser._id.toString() !== decoded._id) {
-            const error = new Error("No authorization");
-            error.status = 401;
-            return next(error);
+        if (user._id.toString() !== req.token._id) {
+            return next(createError(401, "No authorization"));
         }
 
-        Post.countDocuments({ author: decoded._id }, (err, postCount) => {
-            if (err) return next(err);
-            Comment.countDocuments({  author: decoded._id }, (err, commentCount) => {
-                if (err) return next(err);
-                res.status(200).json({ status: 200, user: theuser, postCount: postCount, commentCount: commentCount });
-            });
-        });
-    });
+        const postCount = await Post.countDocuments({ author: req.token._id });
+        const commentCount = await Comment.countDocuments({  author: req.token._id });
+        return res.status(200).json({ status: 200, user: user, postCount: postCount, commentCount: commentCount });
+    } catch (error) {
+        return next(error);
+    }
 };
 
-// GET single user data for editing
-exports.get_user_edit = (req, res, next) => {
-    const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
-    User.findById(decoded._id, "_id first_name last_name email dob avatar").exec((err, theuser) => {
-        if (err) return next(err);
-        if (theuser === null) {
-            const error = new Error("No user found");
-            error.status = 404;
-            return next(error);
+// get single users data for editing
+exports.get_user_edit = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.token._id, "_id first_name last_name email dob avatar");
+        if (!user) {
+            return next(createError(404, "No user found"));
         }
 
-        if (theuser._id.toString() !== decoded._id) {
-            const error = new Error("No authorization");
-            error.status = 401;
-            return next(error);
+        if (user._id.toString() !== req.token._id) {
+            return next(createError(401, "No authorization"));
         }
 
-        res.status(200).json({ status: 200, user: theuser });
-    });
+        return res.status(200).json({ status: 200, user: user });
+    } catch (error) {
+        return next(error);
+    }
 };
 
-// Update User basic information
+// update user basic information
 exports.put_user_basic = [
     upload.single("avatar"),
     body("first_name", "first name has to be specified").trim().isLength({ min: 1 }).isAlpha("fi-FI").escape(),
     body("last_name", "last name has to be specified").trim().isLength({ min: 1 }).isAlpha("fi-FI").escape(),
     body("email", "email has to be specified").trim().isEmail().isLength({ min: 1 }).escape(),
     body("dob", "date of birth has to be specified").isDate({ format: "YYYY-MM-DD" }).isLength({ min: 1 }).escape(),
-    (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            res.status(400).json({ errors: errors.array() });
-        } else {
-            const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
-
-            if(DateTime.fromISO(req.body.dob).diffNow("years").years>-18) {
-                const error = new Error("you must be over 18 years old");
-                error.status = 400;
-                return next(error);
+    async (req, res, next) => {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({ errors: errors.array() });
             }
 
-            User.findById(decoded._id).exec((err, olduser) => {
-                if (err) return next(err);
+            if(DateTime.fromISO(req.body.dob).diffNow("years").years>-18) {
+                return next(createError(400, "you must be over 18 years old"));
+            }
 
-                if (olduser === null || olduser === "") {
-                    const error = new Error("User doesn't exist");
-                    error.status = 404;
-                    return next(error);
-                }
+            const olduser = await User.findById(req.token._id);
+            if (!olduser) {
+                return next(createError(404, "User doesn't exist"));
+            }
 
-                User.findOne({ email: req.body.email }, (err, email_check_user) => {
-                    if (err) return next(err);
+            const emailInUse = await User.findOne({ email: req.body.email });
+            if (emailInUse !== null && emailInUse._id.toString() !== req.token._id) {
+                return next(createError(409, "that email is already taken"));
+            }
 
-                    if (email_check_user !== null && email_check_user._id.toString() !== decoded._id) {
-                        const error = new Error("that email is already taken");
-                        error.status = 409;
-                        return next(error);
-                    }
+            if (req.file) { // new avatar photo
+                const buffer = await sharp(req.file.buffer).resize(256).webp({ lossless: true }).toBuffer();
+                const avatar = await uploadImage(buffer); // uploading the user avatar image file to cloudinary.
 
-                    if (req.file) { // New avatar
-                        sharp(req.file.buffer).resize(256).webp({ lossless: true }).toBuffer((err, data, _info) => {
-                            if (err) return next(err);
+                const editUser = {
+                    first_name: req.body.first_name,
+                    last_name: req.body.last_name,
+                    email: req.body.email,
+                    dob: new Date(req.body.dob),
+                    avatar: {
+                        is_default: false,
+                        public_id: avatar.public_id,
+                        originalName: req.file.originalname,
+                        url: avatar.secure_url
+                    },
+                    _id: req.token._id
+                };
 
-                            // Uploading the user avatar image file to Cloudinary.
-                            const uploadStream = cloudinary.uploader.upload_stream(
-                                {
-                                    folder: config.CLOUD_FOLDER
-                                },
-                                (error, result) => {
-                                    if (error) return next(error);
+                await User.findByIdAndUpdate(req.token._id, editUser, {});
+                return res.status(201).json({ status: 201, message: "The user was updated succesfully" });
+            } else { // old avatar photo
+                const editUser = {
+                    first_name: req.body.first_name,
+                    last_name: req.body.last_name,
+                    email: req.body.email,
+                    dob: new Date(req.body.dob),
+                    avatar: {
+                        is_default: olduser.avatar.is_default,
+                        public_id: olduser.avatar.public_id,
+                        originalName: olduser.avatar.originalName,
+                        url: olduser.avatar.url
+                    },
+                    _id: req.token._id
+                };
 
-                                    const user = new User(
-                                        {
-                                            first_name: req.body.first_name,
-                                            last_name: req.body.last_name,
-                                            email: req.body.email,
-                                            dob: new Date(req.body.dob),
-                                            avatar: {
-                                                is_default: false,
-                                                public_id: result.public_id,
-                                                originalName: req.file.originalname,
-                                                url: result.secure_url
-                                            },
-                                            _id: decoded._id
-                                        }
-                                    );
-
-                                    User.findByIdAndUpdate(decoded._id, user, {}, (err) => {
-                                        if (err) return next(err);
-
-                                        // If previous image is not a default avatar -> Delete it
-                                        if (!olduser.avatar.is_default) {
-                                            cloudinary.uploader.destroy(olduser.avatar.public_id, (error) => {
-                                                if (error) return next(error);
-                                            });
-                                        }
-
-                                        res.status(201).json({ status: 201, message: "The user was updated succesfully" });
-                                    });
-                                }
-                            );
-                            streamifier.createReadStream(data).pipe(uploadStream);
-                        });
-                    } else { // No new avatar
-                        const user = new User(
-                            {
-                                first_name: req.body.first_name,
-                                last_name: req.body.last_name,
-                                email: req.body.email,
-                                dob: new Date(req.body.dob),
-                                avatar: {
-                                    is_default: olduser.avatar.is_default,
-                                    public_id: olduser.avatar.public_id,
-                                    originalName: olduser.avatar.originalName,
-                                    url: olduser.avatar.url
-                                },
-                                _id: decoded._id
-                            }
-                        );
-
-                        User.findByIdAndUpdate(decoded._id, user, {}, (err) => {
-                            if (err) return next(err);
-                            res.status(201).json({ status: 201, message: "The user was updated succesfully" });
-                        });
-                    }
-                });
-            });
+                await User.findByIdAndUpdate(req.token._id, editUser, {});
+                return res.status(201).json({ status: 201, message: "The user was updated succesfully" });
+            }
+        } catch (error) {
+            return next(error);
         }
     }
 ];
 
-// Update User password
+// update user password
 exports.put_user_password = [
     body("old_password", "old password must be specified").isLength({ min: 1 }),
     body("password", "password must be specified").isLength({ min: 1 })
@@ -343,122 +282,95 @@ exports.put_user_password = [
                 return value;
             }
         }),
-    (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            res.status(400).json({ errors: errors.array() });
-        } else {
-            const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
-            User.findById(decoded._id).exec((err, olduser) => {
-                if(err) return next(err);
+    async (req, res, next) => {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({ errors: errors.array() });
+            }
 
-                if (olduser === null || olduser === "") {
-                    const error = new Error("User doesn't exist");
-                    error.status = 404;
-                    return next(error);
-                }
+            const olduser = await User.findById(req.token._id);
+            if (!olduser) {
+                return next(createError(404, "User doesn't exist"));
+            }
 
-                bcrypt.compare(req.body.old_password, olduser.password, (err, result) => {
-                    if (err) return next(err);
-                    if (result) {
-                        // Old Password matches -> Allow to change password
-                        bcrypt.hash(req.body.password, 10, (err, hashedPassword) => {
-                            if (err) return next(err);
+            const isPwdCorrect = await bcrypt.compare(req.body.old_password, olduser.password);
+            if (!isPwdCorrect) {
+                return next(createError(401, "Incorrect password"));
+            }
 
-                            const user = new User(
-                                {
-                                    password: hashedPassword,
-                                    _id: decoded._id
-                                }
-                            );
+            const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
-                            User.findByIdAndUpdate(decoded._id, user, {}, (err) => {
-                                if (err) return next(err);
-                                res.status(201).json({ status: 201, message: "The user password was updated successfully" });
-                            });
-                        });
-                    } else {
-                        // Old Password doesn't match.
-                        const error = new Error("Incorrect password");
-                        error.status = 401;
-                        return next(error);
-                    }
-                });
-            });
+            const editUser = {
+                password: hashedPassword,
+                _id: req.token._id
+            };
+
+            await User.findByIdAndUpdate(req.token._id, editUser, {});
+            return res.status(201).json({ status: 201, message: "The user password was updated successfully" });
+        } catch (error) {
+            return next(error);
         }
     }
 ];
 
-// Deletes users all posts and comments. All comments from users posts will be deleted aswell. User itself will also be deleted.
-exports.delete_user_all = (req, res, next) => {
-    const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
-    User.findById(decoded._id).exec((err, theuser) => {
-        if (err) return next(err);
-        if (theuser === null) {
-            const error = new Error("The user doesnt exist");
-            error.status = 404;
-            return next(error);
+// deletes account's all posts and comments. all comments from accounts posts will be deleted as well. in the end account itself will also be deleted.
+exports.delete_user_all = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.token._id);
+        if (!user) {
+            return next(createError(404, "The user doesnt exist"));
         }
 
-        if (theuser.email !== req.body.email) {
-            const error = new Error("Incorrect creditentials");
-            error.status = 401;
-            return next(error);
+        if (user.email !== req.body.email) {
+            return next(createError(401, "Incorrect creditentials"));
         }
 
-        bcrypt.compare(req.body.password, theuser.password, (err, result) => {
-            if (err) return next(err);
-            if (result) { // Passwords match
-                // Find Users all Posts
-                Post.find({ author: decoded._id }).exec((err, posts_list) => {
-                    if (err) return next(err);
-                    posts_list.forEach((post) => {
-                        // Find all Comments from Users Posts
-                        Comment.find({ post: post._id }).exec((err, comments_list) => {
-                            if (err) return next(err);
-                            comments_list.forEach((comment) => {
-                                // Delete single Comment from the Users Post
-                                Comment.findByIdAndDelete(comment._id, (err) => {
-                                    if (err) return next(err);
-                                });
-                            });
-                        });
-                        // Delete Post db data and server photo file
-                        Post.findByIdAndDelete(post._id, (err) => {
-                            if (err) return next(err);
-                            if (!post.photo.is_default) {
-                                cloudinary.uploader.destroy(post.photo.public_id, (error) => {
-                                    if (error) return next(error);
-                                });
-                            }
-                        });
-                    });
-                    // Find Users all Comments
-                    Comment.find({ author: decoded._id }).exec((err, comments_list) => {
-                        if (err) return next(err);
-                        comments_list.forEach((comment) => {
-                            Comment.findByIdAndDelete(comment._id, (err) => {
-                                if (err) return next(err);
-                            });
-                        });
+        const isPwdCorrect = await bcrypt.compare(req.body.password, user.password);
+        if (!isPwdCorrect) {
+            return next(createError(401, "Incorrect creditentials"));
+        }
 
-                        // Delete User db data and server avatar file
-                        User.findByIdAndDelete(decoded._id, (err) => {
-                            if (err) return next(err);
-                            if (!theuser.avatar.is_default) {
-                                cloudinary.uploader.destroy(theuser.avatar.public_id, (error) => {
-                                    if (error) return next(error);
-                                });
-                            }
-                            res.status(200).json({ status: 200, message: "The user information was deleted successfully" });
-                        });
-                    });
-                });
-            } else { // Passwords dont match
-                const error = new Error("Incorrect creditentials");
-                error.status = 401;
-                return next(error);
-            }
-        });
-    });
+        const posts_array = await Post.find({ author: req.token._id }); // find user's all posts
+
+        await Promise.all(
+            posts_array.map(async post => {
+                const comments_array = await Comment.find({ post: post._id }); // find all comments from user's posts
+                return await Promise.all(
+                    comments_array.map(async comment => {
+                        return await Comment.findByIdAndDelete(comment._id); // delete comments from the user's posts
+                    })
+                );
+            })
+        );
+
+        await Promise.all(
+            posts_array.filter(post => !post.photo.is_default).map(async post => {
+                return await cloudinary.uploader.destroy(post.photo.public_id); // delete user's posts non-default cover photos
+            })
+        );
+
+        await Promise.all(
+            posts_array.map(async post => {
+                return await Post.findByIdAndDelete(post._id); // delete user's posts
+            })
+        );
+
+        const comments_array = await Comment.find({ author: req.token._id }); // find user's all comments
+        await Promise.all(
+            comments_array.map(async comment => {
+                return await Comment.findByIdAndDelete(comment._id); // delete user's all comments
+            })
+        );
+
+        if (!user.avatar.is_default) {
+            await cloudinary.uploader.destroy(user.avatar.public_id); // delete user's non-default avatar photo
+        }
+
+        await User.findByIdAndDelete(req.token._id); // delete User
+
+        return res.status(200).json({ status: 200, message: "The user information was deleted successfully" });
+    } catch (error) {
+        return next(error);
+    }
 };

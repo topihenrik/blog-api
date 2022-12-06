@@ -33,8 +33,8 @@ router.delete("/posts/:postid/comments/:commentid", comment_controller.delete_co
 
 
 /* USER ROUTES */
-// GET single user with full details
-router.get("/user", user_controller.get_user);
+// GET single users full details
+router.get("/user/full", user_controller.get_user_full);
 // GET single user for editing
 router.get("/user/edit", user_controller.get_user_edit);
 // PUT update single user basic information
