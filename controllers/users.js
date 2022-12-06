@@ -34,8 +34,8 @@ const upload = multer({ storage: storage, limits: limits, fileFilter: fileFilter
 // POST Signup User
 exports.post_user = [
     upload.single("avatar"),
-    body("first_name", "first name has to be specified").trim().isLength({ min: 1 }).isAlphanumeric("fi-FI").escape(),
-    body("last_name", "last name has to be specified").trim().isLength({ min: 1 }).isAlphanumeric("fi-FI").escape(),
+    body("first_name", "first name has to be specified").trim().isLength({ min: 1 }).isAlpha("fi-FI").escape(),
+    body("last_name", "last name has to be specified").trim().isLength({ min: 1 }).isAlpha("fi-FI").escape(),
     body("email", "email has to be specified").trim().isEmail().isLength({ min: 1 }).escape(),
     body("dob", "date of birth has to be specified").isDate().isLength({ min: 1 }).escape(),
     body("password", "password must be specified").isLength({ min: 1 })
@@ -161,7 +161,7 @@ exports.post_login = (req, res1, next) => {
                             full_name: user.first_name + " " + user.last_name,
                             avatar_url: user.avatar.url
                         },
-                        status: 201
+                        status: 200
                     }
                 );
             } else {
@@ -225,10 +225,10 @@ exports.get_user_edit = (req, res, next) => {
 // Update User basic information
 exports.put_user_basic = [
     upload.single("avatar"),
-    body("first_name", "first name has to be specified").trim().isLength({ min: 1 }).isAlphanumeric("fi-FI").escape(),
-    body("last_name", "last name has to be specified").trim().isLength({ min: 1 }).isAlphanumeric("fi-FI").escape(),
+    body("first_name", "first name has to be specified").trim().isLength({ min: 1 }).isAlpha("fi-FI").escape(),
+    body("last_name", "last name has to be specified").trim().isLength({ min: 1 }).isAlpha("fi-FI").escape(),
     body("email", "email has to be specified").trim().isEmail().isLength({ min: 1 }).escape(),
-    body("dob", "date of birth has to be specified").isDate().isLength({ min: 1 }).escape(),
+    body("dob", "date of birth has to be specified").isDate({ format: "YYYY-MM-DD" }).isLength({ min: 1 }).escape(),
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -399,6 +399,13 @@ exports.delete_user_all = (req, res, next) => {
             error.status = 404;
             return next(error);
         }
+
+        if (theuser.email !== req.body.email) {
+            const error = new Error("Incorrect creditentials");
+            error.status = 401;
+            return next(error);
+        }
+
         bcrypt.compare(req.body.password, theuser.password, (err, result) => {
             if (err) return next(err);
             if (result) { // Passwords match
