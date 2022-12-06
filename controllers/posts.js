@@ -34,7 +34,7 @@ const upload = multer({ storage: storage, limits: limits, fileFilter: fileFilter
 exports.post_post = [
     upload.single("photo"),
     body("title", "Define title using a Heading 1 element. Minimum length is 5 characters.").trim().isLength({ min: 5 }),
-    body("content", "Content must be defined. Minimum length is 10 characters.").isLength({ min: 10 }),
+    body("content", "Content must be defined. Minimum length is 10 characters.").isLength({ min: 26 }),
     body("description", "Define description using a paragraph element. Minimum length is 5 characters.").trim().isLength({ min: 5 }),
     body("published", "Published value must be a boolean.").isBoolean().escape(),
     (req, res, next) => {
@@ -259,7 +259,7 @@ exports.get_posts_author = (req, res, next) => {
 exports.put_post = [
     upload.single("photo"),
     body("title", "Define title using a Heading 1 element. Minimum length is 5 characters.").trim().isLength({ min: 5 }),
-    body("content", "Content must be defined. Minimum length is 10 characters.").isLength({ min: 10 }),
+    body("content", "Content must be defined. Minimum length is 10 characters.").isLength({ min: 26 }),
     body("description", "Define description using a paragraph element. Minimum length is 5 characters.").trim().isLength({ min: 5 }),
     body("postID", "Post ID must be specified").trim().isLength({ min: 1 }).escape(),
     body("published", "Published value must be a boolean.").isBoolean().escape(),
@@ -290,7 +290,10 @@ exports.put_post = [
 
                 // Published post can't be unpublished
                 if (oldpost.published && !JSON.parse(req.body.published)) {
-                    req.body.published = true;
+                    /* req.body.published = true; */
+                    const error = new Error("Published post can't be unpublished");
+                    error.status = 400;
+                    return next(error);
                 }
 
                 // Optimize if the user submits a new photo. Otherwise use the old one.
@@ -405,7 +408,7 @@ exports.delete_post = (req, res, next) => {
                 if(err) return next(err);
 
                 // If the posts image is not a default image -> Delete it.
-                if (!results.post.is_default) {
+                if (!results.post.photo.is_default) {
                     cloudinary.uploader.destroy(results.post.photo.public_id, (error) => {
                         if (error) return next(error);
                     });

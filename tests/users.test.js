@@ -1,30 +1,10 @@
-require("dotenv").config();
-const express = require("express");
 const request = require("supertest");
-const cookieParser = require("cookie-parser");
-const passport = require("passport");
-const jwtStrategy = require("../strategies/jwt");
-const middleware = require("../utils/middleware");
-const blogRouter = require("../routes/blog");
-const authRouter = require("../routes/auth");
+const app = require("./app-test");
+const db = require("./mongodb-test.js");
 
 const User = require("../models/user");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
-
-const app = express();
-const db = require("./mongodb-memory.js");
-
-passport.use(jwtStrategy);
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-
-app.use("/api", blogRouter);
-app.use("/api/auth", passport.authenticate("jwt", { session: false }), middleware.tokenExtract, authRouter);
-
-app.use(middleware.unknownEndpoint);
-app.use(middleware.errorHandler);
 
 const utility = require("./utility");
 
