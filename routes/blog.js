@@ -25,10 +25,6 @@ router.get("/posts/:postid", post_controller.get_post);
 // GET all comments related to specific post
 router.get("/posts/:postid/comments", comment_controller.get_comments);
 
-// DEAD CODE
-// GET single comment
-router.get("/posts/:postid/comments/:commentid", comment_controller.get_comment);
-
 
 
 /* USER ROUTES */

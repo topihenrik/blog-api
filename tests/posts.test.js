@@ -103,7 +103,7 @@ describe("POST '/api/auth/posts' route", () => {
 });
 
 
-describe("GET '/api/posts' route", () => { // skipped until post_list structure is removed from the response
+describe("GET '/api/posts' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {

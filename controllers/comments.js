@@ -1,152 +1,102 @@
 const Comment = require("../models/comment");
 const Post = require("../models/post");
 const { body,validationResult } = require("express-validator");
-const jwt = require("jsonwebtoken");
-const async = require("async");
+const createError = require("http-errors");
 const DOMPurify = require("../utils/dompurify");
 
-// Create a single comment. Have to be logged in.
+// create a single comment - have to be logged in
 exports.post_comment = [
     body("content", "Content must be specified").trim().isLength({ min: 1 }),
-    (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            res.status(400).json({ errors: errors.array() });
-        } else {
+    async (req, res, next) => {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({ errors: errors.array() });
+            }
             const cleanContent = DOMPurify.sanitize(req.body.content);
-            Post.findById(req.params.postid).exec((err, thepost) => {
-                if (err) return next(err);
+            const post = await Post.findById(req.params.postid);
+            if (!post) {
+                return next(createError(404, "Comment's parent post doesn't exist"));
+            }
 
-                // If the post doesnt exist. Don't allow comment creation.
-                if (!thepost) {
-                    const error = new Error("Comments parent post doesn't exist.");
-                    error.status = 404;
-                    return next(error);
+            const newComment = new Comment(
+                {
+                    content: cleanContent,
+                    author: req.token._id,
+                    post: req.params.postid,
+                    timestamp: Date.now()
                 }
+            );
 
-                const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
-                const comment = new Comment(
-                    {
-                        content: cleanContent,
-                        author: decoded._id,
-                        post: req.params.postid,
-                        timestamp: Date.now()
-                    }
-                );
-
-                comment.save((err) => {
-                    if (err) return next(err);
-                    res.status(201).json({ message: "The message was created successfully", status: 201 });
-                });
-            });
+            await newComment.save();
+            return res.status(201).json();
+        } catch (error) {
+            return next(error);
         }
     }
 ];
 
-
-// Get comments for specific post
-exports.get_comments = (req, res, next) => {
-    Comment.find({ post: req.params.postid }).select({ post: 0 }).populate("author", "_id first_name last_name avatar").exec((err, comment_list) => {
-        if (err) return next(err);
-        if (comment_list === null || comment_list === "") {
-            const error = new Error("Comments not found");
-            error.status = 404;
-            return next(error);
-        }
-        res.status(200).json({ comment_list: comment_list });
-    });
+// get comments for specific post
+exports.get_comments = async (req, res, next) => {
+    try {
+        const comments_array = await Comment.find({ post: req.params.postid }).select({ post: 0 }).populate("author", "_id first_name last_name avatar");
+        res.status(200).json(comments_array);
+    } catch (error) {
+        return next(error);
+    }
 };
 
-// Get single comment
-exports.get_comment = (req, res, next) => {
-    Comment.findById(req.params.commentid).select({ post: 0 }).populate("author", "first_name last_name avatar").exec((err, thecomment) => {
-        if (err) return next(err);
-        if (thecomment === null) {
-            const error = new Error("Comment not found");
-            error.status = 404;
-            return next(error);
-        }
-        res.status(200).json([thecomment]);
-    });
-};
-
-// Update single comment. Have to be the comment author.
+// update a single comment - requestee has to be the author
 exports.put_comment = [
     body("content", "Content must be specified").trim().isLength({ min: 1 }),
-    (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            res.status(400).json({ errors: errors.array() });
-        } else {
-            const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+    async (req, res, next) => {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({ errors: errors.array() });
+            }
+
             const cleanContent = DOMPurify.sanitize(req.body.content);
 
-            Comment.findById(req.params.commentid).exec((err, oldcomment) => {
-                if (err) return next(err);
+            const oldcomment = await Comment.findById(req.params.commentid);
 
-                if (oldcomment.author.toString() !== decoded._id) {
-                    const error = new Error("No authorization.");
-                    error.status = 401;
-                    return next(error);
-                }
+            if (oldcomment.author.toString() !== req.token._id) {
+                return next(createError(401, "No authorization"));
+            }
 
-                if (oldcomment.post.toString() !== req.params.postid) {
-                    const error = new Error("Wrong parent post ID.");
-                    error.status = 400;
-                    return next(error);
-                }
+            const editComment = {
+                content: cleanContent,
+                author: req.token._id,
+                post: req.params.postid,
+                timestamp: oldcomment.timestamp,
+                edit_timestamp: Date.now(),
+                _id: req.params.commentid
+            };
 
-                const comment = new Comment(
-                    {
-                        content: cleanContent,
-                        author: decoded._id,
-                        post: req.params.postid,
-                        timestamp: oldcomment.timestamp,
-                        edit_timestamp: Date.now(),
-                        _id: req.params.commentid
-                    }
-                );
-
-                Comment.findByIdAndUpdate(req.params.commentid, comment, {}, (err) => {
-                    if (err) return next(err);
-                    res.status(200).json({ status: 200, message: "The comment was updated succesfully" });
-                });
-            });
+            await Comment.findByIdAndUpdate(req.params.commentid, editComment, {});
+            return res.status(200).json();
+        } catch (error) {
+            return next(error);
         }
     }
 ];
 
-// DELETE single comment. Have to be the comment author.
-exports.delete_comment = (req, res, next) => {
-    async.parallel({
-        comment(cb) {
-            Comment.findById(req.params.commentid).exec(cb);
-        },
-    }, (err, results) => {
-        if (err) return next(err);
-        const decoded = jwt.decode(req.headers.authorization.split(" ")[1]);
+// delete a single comment - requestee has to be the author
+exports.delete_comment = async (req, res, next) => {
+    try {
+        const comment = await Comment.findById(req.params.commentid);
 
-        if (results === null) {
-            const error = new Error("Comment not found");
-            error.status = 404;
-            return next(error);
+        if (!comment) {
+            return next(createError(404, "Comment not found"));
         }
 
-        if (results.comment.author.toString() !== decoded._id) {
-            const error = new Error("No authorization.");
-            error.status = 401;
-            return next(error);
+        if (comment.author.toString() !== req.token._id) {
+            return next(createError(401, "No authorization"));
         }
 
-        if (results.comment.post.toString() !== req.params.postid) {
-            const error = new Error("Wrong parent post ID.");
-            error.status = 400;
-            return next(error);
-        }
-
-        Comment.findByIdAndDelete(req.params.commentid, (err) => {
-            if (err) return next(err);
-            res.status(200).json({ status: 200, message: "The comment was deleted successfully" });
-        });
-    });
+        await Comment.findByIdAndDelete(req.params.commentid);
+        return res.status(200).end();
+    } catch (error) {
+        return next(error);
+    }
 };
