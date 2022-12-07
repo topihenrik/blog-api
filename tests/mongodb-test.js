@@ -17,9 +17,9 @@ async function connect() {
         console.log(err);
     });
 
-    mongoose.connection.once("open", () => {
+    /* mongoose.connection.once("open", () => {
         console.log(`MongoDB successfully connected to ${mongoURL}`);
-    });
+    }); */
 }
 
 async function close() {

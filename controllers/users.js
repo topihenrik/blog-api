@@ -160,7 +160,6 @@ exports.post_login = async (req, res, next) => {
     }
 };
 
-
 // get single users full details
 exports.get_user_full = async (req, res, next) => {
     try {
