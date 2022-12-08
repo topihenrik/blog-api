@@ -84,7 +84,7 @@ exports.post_post = [
                 );
 
                 await newPost.save();
-                return res.status(201).end();
+                return res.status(201).json({});
             } else { // no photo uploaded -> using a default picture by setting photo properties undefined.
                 const newPost = new Post(
                     {
@@ -103,7 +103,7 @@ exports.post_post = [
                     }
                 );
                 await newPost.save();
-                return res.status(201).end();
+                return res.status(201).json({});
             }
         } catch (error) {
             return next(error);
@@ -275,11 +275,12 @@ exports.put_post = [
                 };
 
                 await Post.findByIdAndUpdate(req.body.postID, editPost, {});
+
                 if (!oldpost.photo.is_default) {
                     await cloudinary.uploader.destroy(oldpost.photo.public_id);
                 }
 
-                return res.status(201).end();
+                return res.status(201).json({});
             } else {
                 const editPost = {
                     title: cleanTitle,
@@ -300,7 +301,7 @@ exports.put_post = [
 
                 await Post.findByIdAndUpdate(req.body.postID, editPost, {});
 
-                return res.status(201).end();
+                return res.status(201).json({});
             }
         } catch (error) {
             return next(error);
@@ -331,7 +332,7 @@ exports.delete_post = async (req, res, next) => {
             await cloudinary.uploader.destroy(post.photo.public_id);
         }
 
-        res.status(200).end();
+        res.status(200).json({});
     } catch (error) {
         return next(error);
     }

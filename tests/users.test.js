@@ -224,12 +224,12 @@ describe("PUT 'api/auth/user/basic' route", () => {
             .expect(200);
 
         const editUser = {
-            _id: infoResult.body.user._id,
-            first_name: infoResult.body.user.first_name,
-            last_name: infoResult.body.user.last_name,
+            _id: infoResult.body._id,
+            first_name: infoResult.body.first_name,
+            last_name: infoResult.body.last_name,
             email: "anne.lahde@outlook.com", // Changed
             dob: "1973-06-03", // Changed
-            avatar: infoResult.body.user.avatar,
+            avatar: infoResult.body.avatar,
         };
 
         await request(app)
@@ -257,15 +257,15 @@ describe("PUT 'api/auth/user/basic' route", () => {
             .set("Authorization", "Bearer " + token)
             .expect(200);
 
-        const editDob = `${new Date(infoResult.body.user.dob).getFullYear()}-${(new Date(infoResult.body.user.dob).getMonth()+1).toString().padStart(2, "0")}-${(new Date(infoResult.body.user.dob).getDate()).toString().padStart(2, "0")}`;
+        const editDob = `${new Date(infoResult.body.dob).getFullYear()}-${(new Date(infoResult.body.dob).getMonth()+1).toString().padStart(2, "0")}-${(new Date(infoResult.body.dob).getDate()).toString().padStart(2, "0")}`;
 
         const editUser = {
-            _id: infoResult.body.user._id,
-            first_name: infoResult.body.user.first_name,
-            last_name: infoResult.body.user.last_name,
-            email: infoResult.body.user.email,
+            _id: infoResult.body._id,
+            first_name: infoResult.body.first_name,
+            last_name: infoResult.body.last_name,
+            email: infoResult.body.email,
             dob: editDob,
-            avatar: infoResult.body.user.avatar,
+            avatar: infoResult.body.avatar,
         };
 
         const invalidFirstName = { ...editUser };

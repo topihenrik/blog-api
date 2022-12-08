@@ -101,7 +101,7 @@ exports.post_signup = [
                 );
 
                 await newUser.save();
-                return res.status(201).json({ message: "The user was created successfully", status: 201 });
+                return res.status(201).json({});
             } else { // no avatar photo, use default
                 const newUser = new User(
                     {
@@ -120,7 +120,7 @@ exports.post_signup = [
                 );
 
                 await newUser.save();
-                return res.status(201).json({ message: "The user was created successfully", status: 201 });
+                return res.status(201).json({});
             }
         } catch (error) {
             return next(error);
@@ -150,8 +150,7 @@ exports.post_login = async (req, res, next) => {
                 _id: user._id,
                 full_name: user.first_name + " " + user.last_name,
                 avatar_url: user.avatar.url
-            },
-            status: 200
+            }
         };
 
         return res.status(200).json(userDetails);
@@ -174,7 +173,7 @@ exports.get_user_full = async (req, res, next) => {
 
         const postCount = await Post.countDocuments({ author: req.token._id });
         const commentCount = await Comment.countDocuments({  author: req.token._id });
-        return res.status(200).json({ status: 200, user: user, postCount: postCount, commentCount: commentCount });
+        return res.status(200).json({ user: user, postCount: postCount, commentCount: commentCount });
     } catch (error) {
         return next(error);
     }
@@ -192,7 +191,7 @@ exports.get_user_edit = async (req, res, next) => {
             return next(createError(401, "No authorization"));
         }
 
-        return res.status(200).json({ status: 200, user: user });
+        return res.status(200).json(user);
     } catch (error) {
         return next(error);
     }
@@ -245,7 +244,12 @@ exports.put_user_basic = [
                 };
 
                 await User.findByIdAndUpdate(req.token._id, editUser, {});
-                return res.status(201).json({ status: 201, message: "The user was updated succesfully" });
+
+                if (!olduser.avatar.is_default) {
+                    await cloudinary.uploader.destroy(olduser.avatar.public_id);
+                }
+
+                return res.status(201).json({});
             } else { // old avatar photo
                 const editUser = {
                     first_name: req.body.first_name,
@@ -262,7 +266,7 @@ exports.put_user_basic = [
                 };
 
                 await User.findByIdAndUpdate(req.token._id, editUser, {});
-                return res.status(201).json({ status: 201, message: "The user was updated succesfully" });
+                return res.status(201).json({});
             }
         } catch (error) {
             return next(error);
@@ -306,7 +310,7 @@ exports.put_user_password = [
             };
 
             await User.findByIdAndUpdate(req.token._id, editUser, {});
-            return res.status(201).json({ status: 201, message: "The user password was updated successfully" });
+            return res.status(201).json({});
         } catch (error) {
             return next(error);
         }
@@ -368,7 +372,7 @@ exports.delete_user_all = async (req, res, next) => {
 
         await User.findByIdAndDelete(req.token._id); // delete User
 
-        return res.status(200).json({ status: 200, message: "The user information was deleted successfully" });
+        return res.status(200).json({});
     } catch (error) {
         return next(error);
     }

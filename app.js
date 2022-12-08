@@ -5,9 +5,9 @@ const cookieParser = require("cookie-parser");
 const logger = require("morgan");
 const passport = require("passport");
 const cors = require("cors");
-const jwtStrategy = require("./strategies/jwt");
+const jwtStrategy = require("./utils/jwt");
 const middleware = require("./utils/middleware");
-const blogRouter = require("./routes/blog");
+const noAuthRouter = require("./routes/no-auth");
 const authRouter = require("./routes/auth");
 
 const app = express();
@@ -27,7 +27,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 // routes
-app.use("/api", blogRouter);
+app.use("/api", noAuthRouter);
 app.use("/api/auth", passport.authenticate("jwt", { session: false }), middleware.tokenExtract, authRouter);
 
 // catch 404 endpoint
