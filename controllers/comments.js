@@ -46,7 +46,7 @@ exports.get_comments = async (req, res, next) => {
     }
 };
 
-// update a single comment - requestee has to be the author
+// update a single comment - requester has to be the author
 exports.put_comment = [
     body("content", "Content must be specified").trim().isLength({ min: 1 }),
     async (req, res, next) => {
@@ -81,7 +81,7 @@ exports.put_comment = [
     }
 ];
 
-// delete a single comment - requestee has to be the author
+// delete a single comment - requester has to be the author
 exports.delete_comment = async (req, res, next) => {
     try {
         const comment = await Comment.findById(req.params.commentid);
