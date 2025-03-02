@@ -3,6 +3,7 @@ const router = require("express").Router();
 const post_controller = require("../controllers/posts");
 const comment_controller = require("../controllers/comments");
 const user_controller = require("../controllers/users");
+const middleware = require("../utils/middleware");
 
 
 
@@ -17,7 +18,7 @@ router.head("/", function(req, res) {
 // GET all posts
 router.get("/posts", post_controller.get_posts);
 // GET single post
-router.get("/posts/:postid", post_controller.get_post);
+router.get("/posts/:postid", middleware.tokenExtract, post_controller.get_post);
 
 
 

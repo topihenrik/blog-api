@@ -160,7 +160,7 @@ exports.post_login = async (req, res, next) => {
 };
 
 // get single users full details
-exports.get_user_full = async (req, res, next) => {
+exports.get_user = async (req, res, next) => {
     try {
         const user = await User.findById(req.token._id, "_id first_name last_name email dob avatar creation_date");
         if (!user) {
@@ -174,24 +174,6 @@ exports.get_user_full = async (req, res, next) => {
         const postCount = await Post.countDocuments({ author: req.token._id });
         const commentCount = await Comment.countDocuments({  author: req.token._id });
         return res.status(200).json({ user: user, postCount: postCount, commentCount: commentCount });
-    } catch (error) {
-        return next(error);
-    }
-};
-
-// get single users data for editing
-exports.get_user_edit = async (req, res, next) => {
-    try {
-        const user = await User.findById(req.token._id, "_id first_name last_name email dob avatar");
-        if (!user) {
-            return next(createError(404, "No user found"));
-        }
-
-        if (user._id.toString() !== req.token._id) {
-            return next(createError(401, "No authorization"));
-        }
-
-        return res.status(200).json(user);
     } catch (error) {
         return next(error);
     }

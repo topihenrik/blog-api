@@ -2,9 +2,17 @@ const multer = require("multer");
 const createError = require("http-errors");
 const jwt = require("jsonwebtoken");
 
-// extract jwt to req.token
+// extract valid jwt to req.token without errors if not valid
 const tokenExtract = (req, res, next) => {
-    req.token = jwt.decode(req.headers.authorization.split(" ")[1]);
+    try {
+        if (jwt.verify(req.headers.authorization?.split(" ")?.[1], process.env.AUTH_SECRET)) {
+            req.token = jwt.decode(req.headers.authorization.split(" ")[1]);
+        }
+    } catch {
+        next();
+        return;
+    }
+
     next();
 };
 

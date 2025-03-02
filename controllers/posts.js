@@ -140,7 +140,8 @@ exports.get_posts = async (req, res, next) => {
     }
 };
 
-// get single post based on post _id - value "published" needs to be true
+// get single post with comment count based on post _id
+// if the requester isn't the author then value "published" needs to be true
 exports.get_post = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.postid).populate("author", "first_name last_name avatar");
@@ -148,11 +149,15 @@ exports.get_post = async (req, res, next) => {
             return next(createError(404, "No post found"));
         }
 
-        if (post.published === false) {
+        if (post.author._id.toString() !== req.token?._id && post.published === false) {
             return next(createError(401, "Post has not been published"));
         }
 
-        return res.status(200).json(post);
+        const commentCount = await Comment.countDocuments({ post: req.params.postid });
+        const post_final = { ...post.toJSON(), count: commentCount };
+        return res.status(200).json(post_final);
+
+        // return res.status(200).json(post);
     } catch (error) {
         return next(error);
     }
@@ -182,39 +187,6 @@ exports.get_posts_author = async (req, res, next) => {
         );
 
         return res.status(200).json(posts_array);
-    } catch (error) {
-        return next(error);
-    }
-};
-
-// get single post based on post _id
-exports.get_post_commentcount = async (req, res, next) => {
-    try {
-        const post = await Post.findById(req.params.postid).populate("author", "first_name last_name avatar");
-        if (!post) {
-            return next(createError(404, "No post found"));
-        }
-        const commentCount = await Comment.countDocuments({ post: req.params.postid });
-        const post_final = { ...post.toJSON(), count: commentCount };
-        return res.status(200).json(post_final);
-    } catch (error) {
-        return next(error);
-    }
-};
-
-// get single post based on post _id - requestee has to be the author
-exports.get_post_edit = async (req, res, next) => {
-    try {
-        const post = await Post.findById(req.params.postid).populate("author", "first_name last_name avatar");
-        if (!post) {
-            return next(createError(404, "No post found"));
-        }
-
-        if (post.author._id.toString() !== req.token._id) {
-            return next(createError(401, "No authorization"));
-        }
-
-        return res.status(200).json(post);
     } catch (error) {
         return next(error);
     }
