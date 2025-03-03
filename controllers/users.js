@@ -162,17 +162,17 @@ exports.post_login = async (req, res, next) => {
 // get single users full details
 exports.get_user = async (req, res, next) => {
     try {
-        const user = await User.findById(req.token._id, "_id first_name last_name email dob avatar creation_date");
+        const user = await User.findById(req.user._id, "_id first_name last_name email dob avatar creation_date");
         if (!user) {
             return next(createError(404, "No user found"));
         }
 
-        if (user._id.toString() !== req.token._id) {
+        if (user._id.toString() !== req.user._id.toString()) {
             return next(createError(401, "No authorization"));
         }
 
-        const postCount = await Post.countDocuments({ author: req.token._id });
-        const commentCount = await Comment.countDocuments({  author: req.token._id });
+        const postCount = await Post.countDocuments({ author: req.user._id });
+        const commentCount = await Comment.countDocuments({  author: req.user._id });
         return res.status(200).json({ user: user, postCount: postCount, commentCount: commentCount });
     } catch (error) {
         return next(error);
@@ -197,13 +197,13 @@ exports.put_user_basic = [
                 return next(createError(400, "you must be over 18 years old"));
             }
 
-            const olduser = await User.findById(req.token._id);
+            const olduser = await User.findById(req.user._id);
             if (!olduser) {
                 return next(createError(404, "User doesn't exist"));
             }
 
             const emailInUse = await User.findOne({ email: req.body.email });
-            if (emailInUse !== null && emailInUse._id.toString() !== req.token._id) {
+            if (emailInUse !== null && emailInUse._id.toString() !== req.user._id.toString()) {
                 return next(createError(409, "that email is already taken"));
             }
 
@@ -222,10 +222,10 @@ exports.put_user_basic = [
                         originalName: req.file.originalname,
                         url: avatar.secure_url
                     },
-                    _id: req.token._id
+                    _id: req.user._id
                 };
 
-                await User.findByIdAndUpdate(req.token._id, editUser, {});
+                await User.findByIdAndUpdate(req.user._id, editUser, {});
 
                 if (!olduser.avatar.is_default) {
                     await cloudinary.uploader.destroy(olduser.avatar.public_id);
@@ -244,10 +244,10 @@ exports.put_user_basic = [
                         originalName: olduser.avatar.originalName,
                         url: olduser.avatar.url
                     },
-                    _id: req.token._id
+                    _id: req.user._id
                 };
 
-                await User.findByIdAndUpdate(req.token._id, editUser, {});
+                await User.findByIdAndUpdate(req.user._id, editUser, {});
                 return res.status(201).json({});
             }
         } catch (error) {
@@ -274,7 +274,7 @@ exports.put_user_password = [
                 return res.status(400).json({ errors: errors.array() });
             }
 
-            const olduser = await User.findById(req.token._id);
+            const olduser = await User.findById(req.user._id);
             if (!olduser) {
                 return next(createError(404, "User doesn't exist"));
             }
@@ -288,10 +288,10 @@ exports.put_user_password = [
 
             const editUser = {
                 password: hashedPassword,
-                _id: req.token._id
+                _id: req.user._id
             };
 
-            await User.findByIdAndUpdate(req.token._id, editUser, {});
+            await User.findByIdAndUpdate(req.user._id, editUser, {});
             return res.status(201).json({});
         } catch (error) {
             return next(error);
@@ -302,7 +302,7 @@ exports.put_user_password = [
 // deletes account's all posts and comments. all comments from accounts posts will be deleted as well. in the end account itself will also be deleted.
 exports.delete_user_all = async (req, res, next) => {
     try {
-        const user = await User.findById(req.token._id);
+        const user = await User.findById(req.user._id);
         if (!user) {
             return next(createError(404, "The user doesnt exist"));
         }
@@ -316,7 +316,7 @@ exports.delete_user_all = async (req, res, next) => {
             return next(createError(401, "Incorrect creditentials"));
         }
 
-        const posts_array = await Post.find({ author: req.token._id }); // find user's all posts
+        const posts_array = await Post.find({ author: req.user._id }); // find user's all posts
 
         await Promise.all(
             posts_array.map(async post => {
@@ -341,7 +341,7 @@ exports.delete_user_all = async (req, res, next) => {
             })
         );
 
-        const comments_array = await Comment.find({ author: req.token._id }); // find user's all comments
+        const comments_array = await Comment.find({ author: req.user._id }); // find user's all comments
         await Promise.all(
             comments_array.map(async comment => {
                 return await Comment.findByIdAndDelete(comment._id); // delete user's all comments
@@ -352,7 +352,7 @@ exports.delete_user_all = async (req, res, next) => {
             await cloudinary.uploader.destroy(user.avatar.public_id); // delete user's non-default avatar photo
         }
 
-        await User.findByIdAndDelete(req.token._id); // delete User
+        await User.findByIdAndDelete(req.user._id); // delete User
 
         return res.status(200).json({});
     } catch (error) {

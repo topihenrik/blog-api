@@ -23,7 +23,7 @@ exports.post_comment = [
             const newComment = new Comment(
                 {
                     content: cleanContent,
-                    author: req.token._id,
+                    author: req.user._id,
                     post: req.body.postId,
                     timestamp: Date.now()
                 }
@@ -61,13 +61,13 @@ exports.put_comment = [
 
             const oldcomment = await Comment.findById(req.params.commentid);
 
-            if (oldcomment.author.toString() !== req.token._id) {
+            if (oldcomment.author.toString() !== req.user._id.toString()) {
                 return next(createError(401, "No authorization"));
             }
 
             const editComment = {
                 content: cleanContent,
-                author: req.token._id,
+                author: req.user._id,
                 timestamp: oldcomment.timestamp,
                 edit_timestamp: Date.now(),
                 _id: req.params.commentid
@@ -90,7 +90,7 @@ exports.delete_comment = async (req, res, next) => {
             return next(createError(404, "Comment not found"));
         }
 
-        if (comment.author.toString() !== req.token._id) {
+        if (comment.author.toString() !== req.user._id.toString()) {
             return next(createError(401, "No authorization"));
         }
 

@@ -7,8 +7,10 @@ const passport = require("passport");
 const cors = require("cors");
 const jwtStrategy = require("./utils/jwt");
 const middleware = require("./utils/middleware");
-const noAuthRouter = require("./routes/no-auth");
-const authRouter = require("./routes/auth");
+const healthRouter = require("./routes/health");
+const usersRouter = require("./routes/users");
+const postsRouter = require("./routes/posts");
+const commentsRouter = require("./routes/comments");
 
 const app = express();
 
@@ -27,8 +29,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 // routes
-app.use("/api", noAuthRouter);
-app.use("/api/auth", passport.authenticate("jwt", { session: false }), middleware.tokenExtract, authRouter);
+app.use("/api", healthRouter, usersRouter, postsRouter, commentsRouter);
 
 // catch 404 endpoint
 app.use(middleware.unknownEndpoint);

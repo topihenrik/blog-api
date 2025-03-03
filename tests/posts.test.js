@@ -17,7 +17,7 @@ test("HEAD server is running", async () => {
         .expect(200);
 });
 
-describe("POST '/api/auth/posts' route", () => {
+describe("POST '/api/posts' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -46,7 +46,7 @@ describe("POST '/api/auth/posts' route", () => {
         const token = loginResult.body.token;
 
         await request(app)
-            .post("/api/auth/posts")
+            .post("/api/posts")
             .send(newPost)
             .set("Authorization", "Bearer " + token)
             .expect(201);
@@ -71,7 +71,7 @@ describe("POST '/api/auth/posts' route", () => {
         const invalidTitle = { ...newPost };
         invalidTitle.title = "Woah";
         await request(app)
-            .post("/api/auth/posts")
+            .post("/api/posts")
             .send(invalidTitle)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -79,7 +79,7 @@ describe("POST '/api/auth/posts' route", () => {
         const invalidContent = { ...newPost };
         invalidContent.content = "<h1></h1><p></p>";
         await request(app)
-            .post("/api/auth/posts")
+            .post("/api/posts")
             .send(invalidContent)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -87,7 +87,7 @@ describe("POST '/api/auth/posts' route", () => {
         const invalidDescription = { ...newPost };
         invalidDescription.description = "Jou!";
         await request(app)
-            .post("/api/auth/posts")
+            .post("/api/posts")
             .send(invalidDescription)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -95,7 +95,7 @@ describe("POST '/api/auth/posts' route", () => {
         const invalidPublished = { ...newPost };
         invalidPublished.published = "yes";
         await request(app)
-            .post("/api/auth/posts")
+            .post("/api/posts")
             .send(invalidPublished)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -164,7 +164,7 @@ describe("GET '/api/posts/:postid' route", () => {
     });
 });
 
-describe("GET '/api/auth/posts/author' route", () => {
+describe("GET '/api/posts/author' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -193,21 +193,21 @@ describe("GET '/api/auth/posts/author' route", () => {
         const token = loginResult.body.token;
 
         await request(app)
-            .get("/api/auth/posts/author")
+            .get("/api/posts/author")
             .set("Authorization", "Bearer " + token)
             .expect(200);
     });
 
     test("failure: invalid jwt", async () => {
         await request(app)
-            .get("/api/auth/posts/author")
+            .get("/api/posts/author")
             .set("Authorization", "Bearer " + "Kabum77!")
             .expect([404, 401]);
     });
 });
 
 
-describe("PUT '/api/auth/posts/:postid' route", () => {
+describe("PUT '/api/posts/:postid' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -245,7 +245,7 @@ describe("PUT '/api/auth/posts/:postid' route", () => {
         const token = loginResult.body.token;
 
         await request(app)
-            .put(`/api/auth/posts/${utility.initPosts[0]._id}`)
+            .put(`/api/posts/${utility.initPosts[0]._id}`)
             .set("Authorization", "Bearer " + token)
             .send(editPost)
             .expect(201);
@@ -267,7 +267,7 @@ describe("PUT '/api/auth/posts/:postid' route", () => {
         const invalidTitle = { ...editPost };
         invalidTitle.title = "Woah";
         await request(app)
-            .put(`/api/auth/posts/${utility.initPosts[0]._id}`)
+            .put(`/api/posts/${utility.initPosts[0]._id}`)
             .send(invalidTitle)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -275,7 +275,7 @@ describe("PUT '/api/auth/posts/:postid' route", () => {
         const invalidContent = { ...editPost };
         invalidContent.content = "<h1></h1><p></p>";
         await request(app)
-            .put(`/api/auth/posts/${utility.initPosts[0]._id}`)
+            .put(`/api/posts/${utility.initPosts[0]._id}`)
             .send(invalidContent)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -283,7 +283,7 @@ describe("PUT '/api/auth/posts/:postid' route", () => {
         const invalidDescription = { ...editPost };
         invalidDescription.description = "Jou!";
         await request(app)
-            .put(`/api/auth/posts/${utility.initPosts[0]._id}`)
+            .put(`/api/posts/${utility.initPosts[0]._id}`)
             .send(invalidDescription)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -291,7 +291,7 @@ describe("PUT '/api/auth/posts/:postid' route", () => {
         const invalidPublished = { ...editPost };
         invalidPublished.published = "yes";
         await request(app)
-            .put(`/api/auth/posts/${utility.initPosts[0]._id}`)
+            .put(`/api/posts/${utility.initPosts[0]._id}`)
             .send(invalidPublished)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -314,14 +314,14 @@ describe("PUT '/api/auth/posts/:postid' route", () => {
         invalidPublished.published = false;
 
         await request(app)
-            .put(`/api/auth/posts/${utility.initPosts[0]._id}`)
+            .put(`/api/posts/${utility.initPosts[0]._id}`)
             .send(invalidPublished)
             .set("Authorization", "Bearer " + token)
             .expect(400);
     });
 });
 
-describe("DELETE '/api/auth/posts/:postid' route", () => {
+describe("DELETE '/api/posts/:postid' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -350,7 +350,7 @@ describe("DELETE '/api/auth/posts/:postid' route", () => {
         const token = loginResult.body.token;
 
         await request(app)
-            .delete(`/api/auth/posts/${utility.initPosts[0]._id}`)
+            .delete(`/api/posts/${utility.initPosts[0]._id}`)
             .send({ confirmation: utility.initPosts[0].title })
             .set("Authorization", "Bearer " + token)
             .expect(200);
@@ -370,7 +370,7 @@ describe("DELETE '/api/auth/posts/:postid' route", () => {
         const token = loginResult.body.token;
 
         await request(app)
-            .delete(`/api/auth/posts/${utility.initPosts[0]._id}`)
+            .delete(`/api/posts/${utility.initPosts[0]._id}`)
             .send({ confirmation: "Happy Bear, Big Adventure!" })
             .set("Authorization", "Bearer " + token)
             .expect(400);

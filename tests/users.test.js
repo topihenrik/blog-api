@@ -130,7 +130,7 @@ describe("POST '/api/login' route", () => {
     });
 });
 
-describe("GET 'api/auth/user' route", () => {
+describe("GET 'api/user' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -151,20 +151,20 @@ describe("GET 'api/auth/user' route", () => {
         const token = loginResult.body.token;
 
         await request(app)
-            .get("/api/auth/user")
+            .get("/api/user")
             .set("Authorization", "Bearer " + token)
             .expect(200);
     });
 
     test("failure: incorrect jwt", async () => {
         await request(app)
-            .get("/api/auth/user")
+            .get("/api/user")
             .set("Authorization", "Bearer " + "IncorrectToken")
             .expect(401);
     });
 });
 
-describe("PUT 'api/auth/user/basic' route", () => {
+describe("PUT 'api/user/basic' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -185,7 +185,7 @@ describe("PUT 'api/auth/user/basic' route", () => {
         const token = loginResult.body.token;
 
         const infoResult = await request(app)
-            .get("/api/auth/user")
+            .get("/api/user")
             .set("Authorization", "Bearer " + token)
             .expect(200);
 
@@ -199,7 +199,7 @@ describe("PUT 'api/auth/user/basic' route", () => {
         };
 
         await request(app)
-            .put("/api/auth/user/basic")
+            .put("/api/user/basic")
             .set("Authorization", "Bearer " + token)
             .send(editUser)
             .expect(201);
@@ -219,7 +219,7 @@ describe("PUT 'api/auth/user/basic' route", () => {
         const token = loginResult.body.token;
 
         const infoResult = await request(app)
-            .get("/api/auth/user")
+            .get("/api/user")
             .set("Authorization", "Bearer " + token)
             .expect(200);
 
@@ -237,7 +237,7 @@ describe("PUT 'api/auth/user/basic' route", () => {
         const invalidFirstName = { ...editUser };
         invalidFirstName.first_name = "&/Lkn/";
         await request(app)
-            .put("/api/auth/user/basic")
+            .put("/api/user/basic")
             .set("Authorization", "Bearer " + token)
             .send(invalidFirstName)
             .expect(400);
@@ -245,7 +245,7 @@ describe("PUT 'api/auth/user/basic' route", () => {
         const invalidLastName = { ...editUser };
         invalidLastName.last_name = "78Tarzan";
         await request(app)
-            .put("/api/auth/user/basic")
+            .put("/api/user/basic")
             .set("Authorization", "Bearer " + token)
             .send(invalidLastName)
             .expect(400);
@@ -253,7 +253,7 @@ describe("PUT 'api/auth/user/basic' route", () => {
         const invalidEmail = { ...editUser };
         invalidEmail.email = "@annukka@gmail.com";
         await request(app)
-            .put("/api/auth/user/basic")
+            .put("/api/user/basic")
             .set("Authorization", "Bearer " + token)
             .send(invalidEmail)
             .expect(400);
@@ -261,7 +261,7 @@ describe("PUT 'api/auth/user/basic' route", () => {
         const invalidDob = { ...editUser };
         invalidDob.dob = "1991-15-15";
         await request(app)
-            .put("/api/auth/user/basic")
+            .put("/api/user/basic")
             .set("Authorization", "Bearer " + token)
             .send(invalidDob)
             .expect(400);
@@ -269,7 +269,7 @@ describe("PUT 'api/auth/user/basic' route", () => {
         const invalidDob2 = { ...editUser };
         invalidDob2.dob = "12-12-1991";
         await request(app)
-            .put("/api/auth/user/basic")
+            .put("/api/user/basic")
             .set("Authorization", "Bearer " + token)
             .send(invalidDob2)
             .expect(400);
@@ -303,7 +303,7 @@ describe("PUT '/user/password' route", () => {
         };
 
         await request(app)
-            .put("/api/auth/user/password")
+            .put("/api/user/password")
             .set("Authorization", "Bearer " + token)
             .send(editPassword)
             .expect(201);
@@ -329,7 +329,7 @@ describe("PUT '/user/password' route", () => {
         };
 
         await request(app)
-            .put("/api/auth/user/password")
+            .put("/api/user/password")
             .set("Authorization", "Bearer " + token)
             .send(invalidOldPassword)
             .expect(401);
@@ -355,14 +355,14 @@ describe("PUT '/user/password' route", () => {
         };
 
         await request(app)
-            .put("/api/auth/user/password")
+            .put("/api/user/password")
             .set("Authorization", "Bearer " + token)
             .send(invalidNewPassword)
             .expect(400);
     });
 });
 
-describe("DELETE '/api/auth/user' route", () => {
+describe("DELETE '/api/user' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -391,7 +391,7 @@ describe("DELETE '/api/auth/user' route", () => {
         const token = loginResult.body.token;
 
         await request(app)
-            .delete("/api/auth/user")
+            .delete("/api/user")
             .send(user)
             .set("Authorization", "Bearer " + token)
             .expect(200);
@@ -421,7 +421,7 @@ describe("DELETE '/api/auth/user' route", () => {
         const invalidPassword = { ...user };
         invalidPassword.password = "kalis123";
         await request(app)
-            .delete("/api/auth/user")
+            .delete("/api/user")
             .send(invalidPassword)
             .set("Authorization", "Bearer " + token)
             .expect(401);
@@ -429,7 +429,7 @@ describe("DELETE '/api/auth/user' route", () => {
         const invalidEmail = { ...user };
         invalidEmail.email = "kari.kuusi@gmail.com";
         await request(app)
-            .delete("/api/auth/user")
+            .delete("/api/user")
             .send(invalidEmail)
             .set("Authorization", "Bearer " + token)
             .expect(401);

@@ -71,7 +71,7 @@ exports.post_post = [
                         title: cleanTitle,
                         content: cleanContent,
                         description: cleanDescription,
-                        author: req.token._id,
+                        author: req.user._id,
                         timestamp: Date.now(),
                         photo: {
                             is_default: false,
@@ -91,7 +91,7 @@ exports.post_post = [
                         title: cleanTitle,
                         content: cleanContent,
                         description: cleanDescription,
-                        author: req.token._id,
+                        author: req.user._id,
                         timestamp: Date.now(),
                         photo: {
                             is_default: true,
@@ -164,7 +164,7 @@ exports.get_post = async (req, res, next) => {
 // get all posts from specific author _id
 exports.get_posts_author = async (req, res, next) => {
     try {
-        const posts_array = await Post.find({ author: req.token._id }).populate("author", "first_name last_name avatar").sort("-timestamp").lean();
+        const posts_array = await Post.find({ author: req.user._id }).populate("author", "first_name last_name avatar").sort("-timestamp").lean();
         if (posts_array.length === 0) {
             return res.status(200).json(posts_array);
         }
@@ -214,7 +214,7 @@ exports.put_post = [
                 return next(createError(404, "Post doesn't exist"));
             }
 
-            if (oldpost.author.toString() !== req.token._id) {
+            if (oldpost.author.toString() !== req.user._id.toString()) {
                 return next(createError(401, "No authorization"));
             }
 
@@ -230,7 +230,7 @@ exports.put_post = [
                     title: cleanTitle,
                     content: cleanContent,
                     description: cleanDescription,
-                    author: req.token._id,
+                    author: req.user._id,
                     timestamp: oldpost.timestamp,
                     edit_timestamp: Date.now(),
                     photo: {
@@ -255,7 +255,7 @@ exports.put_post = [
                     title: cleanTitle,
                     content: cleanContent,
                     description: cleanDescription,
-                    author: req.token._id,
+                    author: req.user._id,
                     timestamp: oldpost.timestamp,
                     edit_timestamp: Date.now(),
                     photo: {
@@ -286,7 +286,7 @@ exports.delete_post = async (req, res, next) => {
             return next(createError(404, "The post doesn't exist"));
         }
 
-        if (post.author.toString() !== req.token._id) {
+        if (post.author.toString() !== req.user._id.toString()) {
             return next(createError(401, "No authorization"));
         }
 

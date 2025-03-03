@@ -17,7 +17,7 @@ test("HEAD server is running", async () => {
         .expect(200);
 });
 
-describe("POST '/api/auth/comments' route", () => {
+describe("POST '/api/comments' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -51,7 +51,7 @@ describe("POST '/api/auth/comments' route", () => {
         };
 
         await request(app)
-            .post("/api/auth/comments")
+            .post("/api/comments")
             .send(newComment)
             .set("Authorization", "Bearer " + token)
             .expect(201);
@@ -77,7 +77,7 @@ describe("POST '/api/auth/comments' route", () => {
         };
 
         await request(app)
-            .post("/api/auth/comments")
+            .post("/api/comments")
             .send(newComment)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -117,7 +117,7 @@ describe("GET '/api/comments/post/:postid' route", () => {
     });
 });
 
-describe("PUT '/api/auth/comments/:commentid' route", () => {
+describe("PUT '/api/comments/:commentid' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -151,7 +151,7 @@ describe("PUT '/api/auth/comments/:commentid' route", () => {
         };
 
         await request(app)
-            .put(`/api/auth/comments/${utility.initComments[0]._id}`)
+            .put(`/api/comments/${utility.initComments[0]._id}`)
             .send(editComment)
             .set("Authorization", "Bearer " + token)
             .expect(200);
@@ -176,7 +176,7 @@ describe("PUT '/api/auth/comments/:commentid' route", () => {
         };
 
         await request(app)
-            .put(`/api/auth/comments/${utility.initComments[0]._id}`)
+            .put(`/api/comments/${utility.initComments[0]._id}`)
             .send(editComment)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -201,14 +201,14 @@ describe("PUT '/api/auth/comments/:commentid' route", () => {
         };
 
         await request(app)
-            .put(`/api/auth/comments/${utility.initComments[0]._id}`)
+            .put(`/api/comments/${utility.initComments[0]._id}`)
             .send(editComment)
             .set("Authorization", "Bearer " + token)
             .expect(401);
     });
 });
 
-describe("DELETE '/api/auth/comments/:commentid' route", () => {
+describe("DELETE '/api/comments/:commentid' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -241,7 +241,7 @@ describe("DELETE '/api/auth/comments/:commentid' route", () => {
         };
 
         await request(app)
-            .delete(`/api/auth/comments/${utility.initComments[0]._id}`)
+            .delete(`/api/comments/${utility.initComments[0]._id}`)
             .send(body)
             .set("Authorization", "Bearer " + token)
             .expect(200);
@@ -265,7 +265,7 @@ describe("DELETE '/api/auth/comments/:commentid' route", () => {
         };
 
         await request(app)
-            .delete(`/api/auth/comments/${utility.initComments[0]._id}`)
+            .delete(`/api/comments/${utility.initComments[0]._id}`)
             .send(body)
             .set("Authorization", "Bearer " + token)
             .expect(401);
