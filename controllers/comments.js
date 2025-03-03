@@ -7,6 +7,7 @@ const DOMPurify = require("../utils/dompurify");
 // create a single comment - have to be logged in
 exports.post_comment = [
     body("content", "Content must be specified").trim().isLength({ min: 1 }),
+    body("postId", "PostId must be specified").trim().isLength({ min: 1 }),
     async (req, res, next) => {
         try {
             const errors = validationResult(req);
@@ -14,7 +15,7 @@ exports.post_comment = [
                 return res.status(400).json({ errors: errors.array() });
             }
             const cleanContent = DOMPurify.sanitize(req.body.content);
-            const post = await Post.findById(req.params.postid);
+            const post = await Post.findById(req.body.postId);
             if (!post) {
                 return next(createError(404, "Comment's parent post doesn't exist"));
             }
@@ -23,7 +24,7 @@ exports.post_comment = [
                 {
                     content: cleanContent,
                     author: req.token._id,
-                    post: req.params.postid,
+                    post: req.body.postId,
                     timestamp: Date.now()
                 }
             );
@@ -67,7 +68,6 @@ exports.put_comment = [
             const editComment = {
                 content: cleanContent,
                 author: req.token._id,
-                post: req.params.postid,
                 timestamp: oldcomment.timestamp,
                 edit_timestamp: Date.now(),
                 _id: req.params.commentid

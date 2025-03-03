@@ -24,7 +24,7 @@ router.get("/posts/:postid", middleware.tokenExtract, post_controller.get_post);
 
 /* COMMNENT ROUTES */
 // GET all comments related to specific post
-router.get("/posts/:postid/comments", comment_controller.get_comments);
+router.get("/comments/post/:postid", comment_controller.get_comments);
 
 
 

@@ -156,8 +156,6 @@ exports.get_post = async (req, res, next) => {
         const commentCount = await Comment.countDocuments({ post: req.params.postid });
         const post_final = { ...post.toJSON(), count: commentCount };
         return res.status(200).json(post_final);
-
-        // return res.status(200).json(post);
     } catch (error) {
         return next(error);
     }
@@ -198,7 +196,6 @@ exports.put_post = [
     body("title", "Define title using a Heading 1 element. Minimum length is 5 characters.").trim().isLength({ min: 5 }),
     body("content", "Content must be defined. Minimum length is 10 characters.").isLength({ min: 26 }),
     body("description", "Define description using a paragraph element. Minimum length is 5 characters.").trim().isLength({ min: 5 }),
-    body("postID", "Post ID must be specified").trim().isLength({ min: 1 }).escape(),
     body("published", "Published value must be a boolean.").isBoolean().escape(),
     async (req, res, next) => {
         try {
@@ -211,7 +208,7 @@ exports.put_post = [
             const cleanContent = DOMPurify.sanitize(req.body.content);
             const cleanDescription = DOMPurify.sanitize(req.body.description);
 
-            const oldpost = await Post.findById(req.body.postID);
+            const oldpost = await Post.findById(req.params.postid);
 
             if (!oldpost) {
                 return next(createError(404, "Post doesn't exist"));
@@ -243,10 +240,10 @@ exports.put_post = [
                         url: photo.secure_url
                     },
                     published: req.body.published,
-                    _id: req.body.postID
+                    _id: req.params.postid
                 };
 
-                await Post.findByIdAndUpdate(req.body.postID, editPost, {});
+                await Post.findByIdAndUpdate(req.params.postid, editPost, {});
 
                 if (!oldpost.photo.is_default) {
                     await cloudinary.uploader.destroy(oldpost.photo.public_id);
@@ -268,10 +265,10 @@ exports.put_post = [
                         url: oldpost.photo.url
                     },
                     published: req.body.published,
-                    _id: req.body.postID
+                    _id: req.params.postid
                 };
 
-                await Post.findByIdAndUpdate(req.body.postID, editPost, {});
+                await Post.findByIdAndUpdate(req.params.postid, editPost, {});
 
                 return res.status(201).json({});
             }

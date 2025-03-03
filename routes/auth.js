@@ -9,10 +9,10 @@ const user_controller = require("../controllers/users");
 /* POST ROUTES */
 // POST create single post
 router.post("/posts", post_controller.post_post);
-// GET single post from specific author
+// GET all posts from specific author
 router.get("/posts/author", post_controller.get_posts_author);
 // PUT update single post
-router.put("/posts", post_controller.put_post);
+router.put("/posts/:postid", post_controller.put_post);
 // DELETE delete single post
 router.delete("/posts/:postid", post_controller.delete_post);
 
@@ -20,11 +20,11 @@ router.delete("/posts/:postid", post_controller.delete_post);
 
 /* COMMENT ROUTES */
 // POST create single comment
-router.post("/posts/:postid/comments", comment_controller.post_comment);
+router.post("/comments", comment_controller.post_comment);
 // PUT update single post
-router.put("/posts/:postid/comments/:commentid", comment_controller.put_comment);
+router.put("/comments/:commentid", comment_controller.put_comment);
 // DELETE delete single post
-router.delete("/posts/:postid/comments/:commentid", comment_controller.delete_comment);
+router.delete("/comments/:commentid", comment_controller.delete_comment);
 
 
 
