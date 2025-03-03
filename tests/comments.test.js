@@ -17,7 +17,7 @@ test("HEAD server is running", async () => {
         .expect(200);
 });
 
-describe("POST '/api/auth/posts/:postid/comments' route", () => {
+describe("POST '/api/auth/comments' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -46,11 +46,12 @@ describe("POST '/api/auth/posts/:postid/comments' route", () => {
         const token = loginResult.body.token;
 
         const newComment = {
-            content: "Wonderful!"
+            content: "Wonderful!",
+            postId: utility.initPosts[1]._id
         };
 
         await request(app)
-            .post(`/api/auth/posts/${utility.initPosts[1]._id}/comments`)
+            .post("/api/auth/comments")
             .send(newComment)
             .set("Authorization", "Bearer " + token)
             .expect(201);
@@ -71,11 +72,12 @@ describe("POST '/api/auth/posts/:postid/comments' route", () => {
         const token = loginResult.body.token;
 
         const newComment = {
-            content: ""
+            content: "",
+            postId: utility.initPosts[1]._id
         };
 
         await request(app)
-            .post(`/api/auth/posts/${utility.initPosts[1]._id}/comments`)
+            .post("/api/auth/comments")
             .send(newComment)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -83,7 +85,7 @@ describe("POST '/api/auth/posts/:postid/comments' route", () => {
     });
 });
 
-describe("GET '/api/posts/:postid/comments' route", () => {
+describe("GET '/api/comments/post/:postid' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -100,7 +102,7 @@ describe("GET '/api/posts/:postid/comments' route", () => {
 
     test("success: get all comments for specific post", async () => {
         const result = await request(app)
-            .get(`/api/posts/${utility.initPosts[1]._id}/comments`)
+            .get(`/api/comments/post/${utility.initPosts[1]._id}`)
             .expect(200);
 
         expect(result.body).toHaveLength(2);
@@ -108,14 +110,14 @@ describe("GET '/api/posts/:postid/comments' route", () => {
 
     test("success: no comments in db for specific post", async () => {
         const result = await request(app)
-            .get(`/api/posts/${utility.initPosts[0]._id}/comments`)
+            .get(`/api/comments/post/${utility.initPosts[0]._id}`)
             .expect(200);
 
         expect(result.body).toHaveLength(0);
     });
 });
 
-describe("PUT '/api/auth/posts/:postid/comments/:commentid' route", () => {
+describe("PUT '/api/auth/comments/:commentid' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -133,7 +135,8 @@ describe("PUT '/api/auth/posts/:postid/comments/:commentid' route", () => {
     test("success: comment updated", async () => {
         const user = {
             email: "jari.kuusi@gmail.com",
-            password: "salis123"
+            password: "salis123",
+            postId: utility.initPosts[1]._id
         };
 
         const loginResult = await request(app)
@@ -148,7 +151,7 @@ describe("PUT '/api/auth/posts/:postid/comments/:commentid' route", () => {
         };
 
         await request(app)
-            .put(`/api/auth/posts/${utility.initPosts[1]._id}/comments/${utility.initComments[0]._id}`)
+            .put(`/api/auth/comments/${utility.initComments[0]._id}`)
             .send(editComment)
             .set("Authorization", "Bearer " + token)
             .expect(200);
@@ -168,11 +171,12 @@ describe("PUT '/api/auth/posts/:postid/comments/:commentid' route", () => {
         const token = loginResult.body.token;
 
         const editComment = {
-            content: ""
+            content: "",
+            postId: utility.initPosts[1]._id
         };
 
         await request(app)
-            .put(`/api/auth/posts/${utility.initPosts[1]._id}/comments/${utility.initComments[0]._id}`)
+            .put(`/api/auth/comments/${utility.initComments[0]._id}`)
             .send(editComment)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -192,18 +196,19 @@ describe("PUT '/api/auth/posts/:postid/comments/:commentid' route", () => {
         const token = loginResult.body.token;
 
         const editComment = {
-            content: "Fantastico!!!"
+            content: "Fantastico!!!",
+            postId: utility.initPosts[1]._id
         };
 
         await request(app)
-            .put(`/api/auth/posts/${utility.initPosts[1]._id}/comments/${utility.initComments[0]._id}`)
+            .put(`/api/auth/comments/${utility.initComments[0]._id}`)
             .send(editComment)
             .set("Authorization", "Bearer " + token)
             .expect(401);
     });
 });
 
-describe("DELETE '/api/auth/posts/:postid/comments/:commentid' route", () => {
+describe("DELETE '/api/auth/comments/:commentid' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -231,8 +236,13 @@ describe("DELETE '/api/auth/posts/:postid/comments/:commentid' route", () => {
 
         const token = loginResult.body.token;
 
+        const body = {
+            postId: utility.initPosts[1]._id,
+        };
+
         await request(app)
-            .delete(`/api/auth/posts/${utility.initPosts[1]._id}/comments/${utility.initComments[0]._id}`)
+            .delete(`/api/auth/comments/${utility.initComments[0]._id}`)
+            .send(body)
             .set("Authorization", "Bearer " + token)
             .expect(200);
     });
@@ -250,8 +260,13 @@ describe("DELETE '/api/auth/posts/:postid/comments/:commentid' route", () => {
 
         const token = loginResult.body.token;
 
+        const body = {
+            postId: utility.initPosts[1]._id,
+        };
+
         await request(app)
-            .delete(`/api/auth/posts/${utility.initPosts[1]._id}/comments/${utility.initComments[0]._id}`)
+            .delete(`/api/auth/comments/${utility.initComments[0]._id}`)
+            .send(body)
             .set("Authorization", "Bearer " + token)
             .expect(401);
     });

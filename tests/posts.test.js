@@ -207,7 +207,7 @@ describe("GET '/api/auth/posts/author' route", () => {
 });
 
 
-describe("PUT '/api/auth/posts' route", () => {
+describe("PUT '/api/auth/posts/:postid' route", () => {
     beforeEach(async () => await db.clear());
 
     beforeEach(async () => {
@@ -223,7 +223,7 @@ describe("PUT '/api/auth/posts' route", () => {
     });
 
     const editPost = {
-        postID: utility.initPosts[0]._id,
+        postId: utility.initPosts[0]._id,
         title: "Hello World!!!",
         content: "<h1>Hello World!!!</h1><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis ipsum dui, placerat ut tellus ac, tincidunt fermentum est. Vivamus sed libero vel mauris vestibulum consectetur sit amet ac justo. Ut sed porta velit. Sed porttitor lacus sodales hendrerit cursus. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Suspendisse ullamcorper pulvinar justo id pretium. Proin at semper.</p>",
         description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis ipsum dui, placerat ut tellus ac, tincidunt fermentum est. Vivamus sed libero vel mauris vestibulum consectetur sit amet ac justo. Ut sed porta velit. Sed porttitor lacus sodales hendrerit cursus. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Suspendisse ullamcorper pulvinar justo id pretium. Proin at semper.",
@@ -245,7 +245,7 @@ describe("PUT '/api/auth/posts' route", () => {
         const token = loginResult.body.token;
 
         await request(app)
-            .put("/api/auth/posts")
+            .put(`/api/auth/posts/${utility.initPosts[0]._id}`)
             .set("Authorization", "Bearer " + token)
             .send(editPost)
             .expect(201);
@@ -267,7 +267,7 @@ describe("PUT '/api/auth/posts' route", () => {
         const invalidTitle = { ...editPost };
         invalidTitle.title = "Woah";
         await request(app)
-            .put("/api/auth/posts")
+            .put(`/api/auth/posts/${utility.initPosts[0]._id}`)
             .send(invalidTitle)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -275,7 +275,7 @@ describe("PUT '/api/auth/posts' route", () => {
         const invalidContent = { ...editPost };
         invalidContent.content = "<h1></h1><p></p>";
         await request(app)
-            .put("/api/auth/posts")
+            .put(`/api/auth/posts/${utility.initPosts[0]._id}`)
             .send(invalidContent)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -283,7 +283,7 @@ describe("PUT '/api/auth/posts' route", () => {
         const invalidDescription = { ...editPost };
         invalidDescription.description = "Jou!";
         await request(app)
-            .put("/api/auth/posts")
+            .put(`/api/auth/posts/${utility.initPosts[0]._id}`)
             .send(invalidDescription)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -291,7 +291,7 @@ describe("PUT '/api/auth/posts' route", () => {
         const invalidPublished = { ...editPost };
         invalidPublished.published = "yes";
         await request(app)
-            .put("/api/auth/posts")
+            .put(`/api/auth/posts/${utility.initPosts[0]._id}`)
             .send(invalidPublished)
             .set("Authorization", "Bearer " + token)
             .expect(400);
@@ -314,7 +314,7 @@ describe("PUT '/api/auth/posts' route", () => {
         invalidPublished.published = false;
 
         await request(app)
-            .put("/api/auth/posts")
+            .put(`/api/auth/posts/${utility.initPosts[0]._id}`)
             .send(invalidPublished)
             .set("Authorization", "Bearer " + token)
             .expect(400);
